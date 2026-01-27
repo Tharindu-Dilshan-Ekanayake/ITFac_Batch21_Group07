@@ -4,3 +4,8 @@ test('First Playwright test', async  () =>
 {
     //playwright code
 });
+
+test('Second Playwright test', async  () =>
+{
+    //playwright code
+});
