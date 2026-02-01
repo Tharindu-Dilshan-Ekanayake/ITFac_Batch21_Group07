@@ -159,3 +159,88 @@ test("Verify reset button functionality", async ({ page, baseURL }) => {
         }
     }
 });
+
+test("Sort categories by ID", async ({ page, baseURL }) => {
+  await page.goto(`${baseURL}/ui/categories`);
+
+  const idHeader = page.locator('th a:has-text("ID")');
+
+  // Click once → ASC
+  await idHeader.click();
+  // Targets the first <td> in every row
+  const columnValues = await page.locator('table td:nth-child(1)').allInnerTexts();
+  const sortedAsc = [...columnValues].sort((a, b) => Number(a) - Number(b));
+
+  expect(columnValues).toEqual(sortedAsc);
+  await expectArrow(idHeader, "down");
+
+  // Click again → DESC
+  await idHeader.click();
+  const descValues = await page.locator('table td:nth-child(1)').allInnerTexts();
+  const sortedDesc = [...sortedAsc].reverse();
+  expect(descValues).toEqual(sortedDesc);
+  await expectArrow(idHeader, "up");
+});
+
+// helper function to detect arrow 
+async function expectArrow(headerLocator, direction) {
+  const arrow = headerLocator.locator("span");
+
+  if (direction === "up") {
+    await expect(arrow).toHaveText("↑");
+  } else {
+    await expect(arrow).toHaveText("↓");
+  }
+}
+
+test("Sort categories by Name", async ({ page, baseURL }) => {
+  await page.goto(`${baseURL}/ui/categories`);
+
+  const nameHeader = page.locator('th a:has-text("Name")');
+
+  // Click once → Z-A
+  await nameHeader.click();
+  const descValues = await page.locator('table td:nth-child(2)').allInnerTexts();
+  const normalizedDesc = descValues.map(v => v.trim().toLowerCase()); // convert all capital letters to lower
+  const expectedDesc = [...normalizedDesc].sort((a, b) => b.localeCompare(a));
+
+  expect(normalizedDesc).toEqual(expectedDesc);
+  await expectArrow(nameHeader, "up");
+
+  // Click again → A-Z
+  await nameHeader.click();
+  const ascValues = await page.locator('table td:nth-child(2)').allInnerTexts();
+  const normalizedAsc = ascValues.map(v => v.trim().toLowerCase()); // convert all capital letters to lower
+  const expectedAsc = [...normalizedAsc].sort((a, b) => a.localeCompare(b));
+
+  expect(normalizedAsc).toEqual(expectedAsc);
+  await expectArrow(nameHeader, "down");
+});
+
+test("Sort categories by Parent", async ({ page, baseURL }) => {
+  await page.goto(`${baseURL}/ui/categories`);
+
+  const parentHeader = page.locator('th a:has-text("Parent")');
+
+  // Click once → Z-A
+  await parentHeader.click();
+  const descValues = await page.locator('table td:nth-child(3)').allInnerTexts();
+  const normalizedDesc = descValues.map(v => v.trim().toLowerCase()); // convert all capital letters to lower
+  const expectedDesc = [...normalizedDesc].sort((a, b) => b.localeCompare(a));
+
+  expect(normalizedDesc).toEqual(expectedDesc);
+  await expectArrow(parentHeader, "up");
+
+  // Click again → A-Z
+  await parentHeader.click();
+  const ascValues = await page.locator('table td:nth-child(3)').allInnerTexts();
+  const normalizedAsc = ascValues.map(v => v.trim().toLowerCase()); // convert all capital letters to lower
+  const expectedAsc = [...normalizedAsc].sort((a, b) => a.localeCompare(b));
+
+  expect(normalizedAsc).toEqual(expectedAsc);
+  await expectArrow(parentHeader, "down");
+});
+
+
+
+
