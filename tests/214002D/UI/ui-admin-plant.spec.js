@@ -1,8 +1,8 @@
-// @ts-check
 import { test, expect } from "@playwright/test";
 
 test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
-  const categoryId = "2"; // change if needed
+  
+  const categoryId = "2";
   const price = "250";
   const quantityLow = "2";
   const quantityNormal = "10";
@@ -10,19 +10,14 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
   const timestamp = Date.now();
   const plantNameNormal = `Test Tulip ${timestamp}`;
 
-  const uniqueId = Math.floor(Math.random() * 1000); // max 4 chars
-  const plantNameLow = `RoseLow${uniqueId}`; // always < 25 chars
+  const uniqueId = Math.floor(Math.random() * 1000);
+  const plantNameLow = `RoseLow${uniqueId}`;
 
-  /**
-   * Reusable function to fill Add/Edit Plant form
-   * (also clears fields first to avoid flaky behavior)
-   */
   /**
    * @typedef {import('@playwright/test').Page} Page
    */
 
   /**
-   * Plant form data for filling the form.
    * @typedef {Object} PlantFormData
    * @property {string|null} name
    * @property {string|null} category
@@ -31,13 +26,13 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
    */
 
   /**
-   * Fills the Add/Edit Plant form fields.
    * @param {Page} page
    * @param {PlantFormData['name']} name
    * @param {PlantFormData['category']} category
    * @param {PlantFormData['price']} price
    * @param {PlantFormData['quantity']} quantity
    */
+
   const fillPlantForm = async (page, name, category, price, quantity) => {
     if (name !== null) {
       await page.locator("#name").fill("");
@@ -59,9 +54,7 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     }
   };
 
-  // Helper: get validation message under a field
   /**
-   * Returns the locator for the validation message under a field.
    * @param {import('@playwright/test').Page} page
    * @param {string} selector
    * @returns {import('@playwright/test').Locator}
@@ -93,7 +86,7 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     await page.goto(`${baseURL}/ui/plants/add`);
 
     await fillPlantForm(page, "", categoryId, price, quantityNormal);
-    await page.locator("#price").click(); // trigger validation
+    await page.locator("#price").click();
     await page.getByRole("button", { name: /save/i }).click();
 
     await page.waitForTimeout(500);
@@ -104,7 +97,7 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
   });
 
   /* ======================================================
-     UI_ADMIN_Plant-04 — Plant Name Length Validation (FIXED)
+     UI_ADMIN_Plant-04 — Plant Name Length Validation 
   ====================================================== */
   test("UI_ADMIN_Plant-04: Validate Plant Name length", async ({
     page,
@@ -112,14 +105,12 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
   }) => {
     await page.goto(`${baseURL}/ui/plants/add`);
 
-    // Case 1: Less than 3 characters
     await fillPlantForm(page, "AB", categoryId, price, quantityNormal);
-    await page.locator("#price").click(); // trigger validation
+    await page.locator("#price").click();
     await page.getByRole("button", { name: /save/i }).click();
 
     await expect(fieldError(page, "#name")).toContainText(/Plant name must/i);
 
-    // Case 2: More than 25 characters
     await fillPlantForm(
       page,
       "AB" + "C".repeat(24),
@@ -296,23 +287,67 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
   });
 
   /* ======================================================
-     UI_ADMIN_Plant-12 — Verify Edit Button Visible
-  ====================================================== */
-  test("UI_ADMIN_Plant-12: Verify Edit button visible", async ({
+   UI_ADMIN_Plant-12 — Verify Edit button & edit functionality 
+====================================================== */
+  test("UI_ADMIN_Plant-12: Verify Edit button and edit functionality", async ({
     page,
     baseURL,
   }) => {
     await page.goto(`${baseURL}/ui/plants`);
 
     const row = page.locator("tr", { hasText: plantNameLow });
-    const editButton = row.locator("a[title='Edit']");
+    await expect(row).toBeVisible({ timeout: 5000 });
 
+    const editButton = row.locator('a[title="Edit"]');
     await expect(editButton).toBeVisible();
+
+    await Promise.all([
+      page.waitForURL(/\/ui\/plants\/edit\/\d+/, { timeout: 10000 }),
+      editButton.click(),
+    ]);
+
+    await expect(page.locator("form")).toBeVisible();
+
+    await expect(page.locator("#name")).toHaveValue(plantNameLow);
+
+    const priceValue = await page.locator("#price").inputValue();
+    expect(Number(priceValue)).toBe(Number(price));
+
+    const quantityValue = await page.locator("#quantity").inputValue();
+    expect(Number(quantityValue)).toBe(Number(quantityLow));
   });
 
   /* ======================================================
-     UI_ADMIN_Plant-21 — Delete Plant   { Need to fix this }
-  ====================================================== */
+   UI_ADMIN_Plant-13 — Edit plant and save changes
+====================================================== */
+
+  test("UI_ADMIN_Plant-13: Edit plant and save changes", async ({
+    page,
+    baseURL,
+  }) => {
+    await page.goto(`${baseURL}/ui/plants`);
+
+    const row = page.locator("tr", { hasText: plantNameLow });
+    await row.locator('a[title="Edit"]').click();
+
+    await expect(page.locator("form")).toBeVisible();
+
+    await page.locator("#quantity").fill("8");
+
+    await Promise.all([
+      page.waitForURL(`${baseURL}/ui/plants`),
+      page.getByRole("button", { name: /save/i }).click(),
+    ]);
+
+    const updatedRow = page.locator("tr", { hasText: plantNameLow });
+    const stockCell = updatedRow.locator("td").nth(3);
+
+    await expect(stockCell).toContainText("8");
+  });
+
+  /* ======================================================
+   UI_ADMIN_Plant-21 — Delete Plant with confirmation
+====================================================== */
   test("UI_ADMIN_Plant-21: Delete plant with confirmation", async ({
     page,
     baseURL,
@@ -322,13 +357,20 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     const row = page.locator("tr", { hasText: plantNameLow });
     await expect(row).toBeVisible();
 
-    await row.locator("a[title='Delete']").click();
+    page.once("dialog", async (dialog) => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toContain("Delete this plant?");
+      await dialog.accept();
+    });
 
-    const confirmDialog = page.locator("div.modal-dialog");
-    await expect(confirmDialog).toBeVisible();
-
-    await confirmDialog.getByRole("button", { name: /confirm/i }).click();
+    await row.locator('button[title="Delete"]').click();
 
     await expect(page.locator("tr", { hasText: plantNameLow })).toHaveCount(0);
+    const alert = page.locator(".alert.alert-success");
+
+    await expect(alert).toBeVisible({ timeout: 10000 });
+    await expect(alert.locator("span")).toHaveText(
+      "Plant deleted successfully",
+    );
   });
 });
