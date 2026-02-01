@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 
 test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
-  
   const categoryId = "2";
   const price = "250";
   const quantityLow = "2";
@@ -64,10 +63,8 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     /** @type {string} */ selector,
   ) => page.locator(`${selector} + div, ${selector} ~ div`);
 
-  /* ======================================================
-     UI_ADMIN_Plant-02 — Navigate to Add Plant Page
-  ====================================================== */
-  test("UI_ADMIN_Plant-02: Navigate to Add Plant page", async ({
+
+  test("UI_ADMIN_Plant-01: Navigate to Add Plant page", async ({
     page,
     baseURL,
   }) => {
@@ -76,10 +73,8 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     await expect(page.locator("form")).toBeVisible({ timeout: 5000 });
   });
 
-  /* ======================================================
-     UI_ADMIN_Plant-03 — Plant Name Required
-  ====================================================== */
-  test("UI_ADMIN_Plant-03: Validate Plant Name is required", async ({
+
+  test("UI_ADMIN_Plant-02: Validate Plant Name is required", async ({
     page,
     baseURL,
   }) => {
@@ -96,10 +91,8 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     );
   });
 
-  /* ======================================================
-     UI_ADMIN_Plant-04 — Plant Name Length Validation 
-  ====================================================== */
-  test("UI_ADMIN_Plant-04: Validate Plant Name length", async ({
+
+  test("UI_ADMIN_Plant-03: Validate Plant Name length", async ({
     page,
     baseURL,
   }) => {
@@ -126,10 +119,8 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     await expect(fieldError(page, "#name")).toContainText(/Plant name must/i);
   });
 
-  /* ======================================================
-     UI_ADMIN_Plant-05 — Category Required
-  ====================================================== */
-  test("UI_ADMIN_Plant-05: Validate Category is required", async ({
+
+  test("UI_ADMIN_Plant-04: Validate Category is required", async ({
     page,
     baseURL,
   }) => {
@@ -145,10 +136,7 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     );
   });
 
-  /* ======================================================
-     UI_ADMIN_Plant-06 — Price Required
-  ====================================================== */
-  test("UI_ADMIN_Plant-06: Validate Price is required", async ({
+  test("UI_ADMIN_Plant-05: Validate Price is required", async ({
     page,
     baseURL,
   }) => {
@@ -164,10 +152,7 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     );
   });
 
-  /* ======================================================
-     UI_ADMIN_Plant-07 — Price <= 0 Validation
-  ====================================================== */
-  test("UI_ADMIN_Plant-07: Validate Price cannot be 0 or negative", async ({
+  test("UI_ADMIN_Plant-06: Validate Price cannot be 0 or negative", async ({
     page,
     baseURL,
   }) => {
@@ -189,10 +174,8 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     );
   });
 
-  /* ======================================================
-     UI_ADMIN_Plant-08 — Quantity Required
-  ====================================================== */
-  test("UI_ADMIN_Plant-08: Validate Quantity is required", async ({
+
+  test("UI_ADMIN_Plant-07: Validate Quantity is required", async ({
     page,
     baseURL,
   }) => {
@@ -208,10 +191,8 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     );
   });
 
-  /* ======================================================
-     UI_ADMIN_Plant-09 — Quantity <= 0 Validation
-  ====================================================== */
-  test("UI_ADMIN_Plant-09: Validate Quantity cannot be 0 or negative", async ({
+ 
+  test("UI_ADMIN_Plant-08: Validate Quantity cannot be 0 or negative", async ({
     page,
     baseURL,
   }) => {
@@ -227,10 +208,8 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     );
   });
 
-  /* ======================================================
-     UI_ADMIN_Plant-10 + 01 — Create Plant + Verify LOW Badge
-  ====================================================== */
-  test("UI_ADMIN_Plant-10 & 01: Create plant and verify LOW badge", async ({
+
+  test("UI_ADMIN_Plant-10: Create plant and verify LOW badge", async ({
     page,
     baseURL,
   }) => {
@@ -265,9 +244,6 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     await expect(editButton).toBeVisible();
   });
 
-  /* ======================================================
-     UI_ADMIN_Plant-11 — Cancel on Add Plant
-  ====================================================== */
   test("UI_ADMIN_Plant-11: Cancel button on Add Plant", async ({
     page,
     baseURL,
@@ -286,9 +262,6 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     await expect(page).toHaveURL(/\/ui\/plants$/);
   });
 
-  /* ======================================================
-   UI_ADMIN_Plant-12 — Verify Edit button & edit functionality 
-====================================================== */
   test("UI_ADMIN_Plant-12: Verify Edit button and edit functionality", async ({
     page,
     baseURL,
@@ -317,9 +290,6 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     expect(Number(quantityValue)).toBe(Number(quantityLow));
   });
 
-  /* ======================================================
-   UI_ADMIN_Plant-13 — Edit plant and save changes
-====================================================== */
 
   test("UI_ADMIN_Plant-13: Edit plant and save changes", async ({
     page,
@@ -345,10 +315,8 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     await expect(stockCell).toContainText("8");
   });
 
-  /* ======================================================
-   UI_ADMIN_Plant-21 — Delete Plant with confirmation
-====================================================== */
-  test("UI_ADMIN_Plant-21: Delete plant with confirmation", async ({
+
+  test("UI_ADMIN_Plant-14: Delete plant with confirmation", async ({
     page,
     baseURL,
   }) => {
