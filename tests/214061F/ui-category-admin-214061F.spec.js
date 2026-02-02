@@ -127,22 +127,22 @@ test("UI_ADMIN_Category-14: should create a main category when parent category i
   // Step 3: Click Save
   await page.locator("button:has-text('Save')").click();
 
-  // ✅ Expected: Redirect to Categories page
+  // Expected: Redirect to Categories page
   await expect(page).toHaveURL(/\/ui\/categories$/);
 
-  // ✅ Expected: Success message displayed
+  // Expected: Success message displayed
   const successAlert = page.locator(
     '.alert-success >> text=Category created successfully'
   );
   await expect(successAlert).toBeVisible();
 
-  // ✅ Expected: Category shown in table
+  // Expected: Category shown in table
   const newRow = page.locator("table tbody tr", {
     hasText: categoryName,
   });
   await expect(newRow).toBeVisible();
 
-  // ✅ Expected: Parent column shows "-" (main category)
+  // Expected: Parent column shows "-" (main category)
   await expect(newRow).toContainText("-");
 });
 
@@ -170,3 +170,192 @@ test("UI_ADMIN_Category-15: create main category and then create sub-category un
   const row = page.locator("table tbody tr", { hasText: childName });
   await expect(row).toContainText(parentName);
 });
+
+//test 16
+test("UI_ADMIN_Category-16: should discard changes and navigate back when Cancel is clicked", async ({ page, baseURL }) => {
+  await page.goto(`${baseURL}/ui/categories/add`);
+  await page.waitForLoadState("networkidle");
+
+  const tempName = `TEMP`;
+  await page.locator('input[name="name"]').fill(tempName);
+
+  // Cancel is an <a> link, pick the correct one
+  const cancelButton = page.locator('a.btn.btn-secondary[href="/ui/categories"]:has-text("Cancel")');
+  await expect(cancelButton).toBeVisible();
+  await cancelButton.click();
+
+  await expect(page).toHaveURL(/\/ui\/categories$/);
+
+  // verify not saved
+  await expect(page.locator("table")).not.toContainText(tempName);
+});
+
+//test 17
+test("UI_ADMIN_Category-17: should display Edit button for categories", async ({
+  page,
+  baseURL,
+}) => {
+  // Navigate to Categories page
+  await page.goto(`${baseURL}/ui/categories`);
+  await page.waitForLoadState("networkidle");
+
+  // Verify table is visible
+  const table = page.locator("table");
+  await expect(table).toBeVisible();
+
+  // Verify at least one Edit button is visible
+  const editButton = page.locator('a[title="Edit"]').first();
+  await expect(editButton).toBeVisible();
+});
+
+//test 18
+test("UI_ADMIN_Category-18: should show validation error when category name is empty on edit", async ({
+  page,
+  baseURL,
+}) => {
+  // 1) CREATE CATEGORY
+  await page.goto(`${baseURL}/ui/categories/add`);
+  await page.waitForLoadState("networkidle");
+
+  const createdName = `EDITtest`; // 
+  await page.locator('input[name="name"]').fill(createdName);
+  await page.locator('button:has-text("Save")').click();
+
+  await expect(page).toHaveURL(/\/ui\/categories$/);
+  await expect(page.locator(".alert-success")).toContainText(
+    "Category created successfully"
+  );
+
+  // 2) FIND CREATED ROW (handle duplicates safely)
+  const createdRows = page.locator("table tbody tr", { hasText: createdName });
+  await expect(createdRows.first()).toBeVisible();
+  const createdRow = createdRows.last();
+
+  // 3) OPEN EDIT PAGE
+  await createdRow.locator('a[title="Edit"]').click();
+  await expect(page).toHaveURL(/\/ui\/categories\/edit\/\d+/);
+
+  // 4) CLEAR NAME properly (trigger validation)
+  const nameInput = page.locator('input[name="name"]');
+  await nameInput.click();
+  await nameInput.press("Control+A");
+  await nameInput.press("Backspace");
+  await nameInput.blur();
+
+  // 5) SAVE
+  await page.locator('button:has-text("Save")').click();
+
+  // 6) ASSERT VALIDATION
+  await expect(page.getByText("Category name is required")).toBeVisible();
+
+  // 7) STILL ON EDIT PAGE
+  await expect(page).toHaveURL(/\/ui\/categories\/edit\/\d+/);
+});
+
+//test 19
+test("UI_ADMIN_Category-19: should edit category name and keep parent category default", async ({
+  page,
+  baseURL,
+}) => {
+
+  // 1) CREATE CATEGORY
+  await page.goto(`${baseURL}/ui/categories/add`);
+  await page.waitForLoadState("networkidle");
+
+  const createdName = "EDITPass";
+  await page.locator('input[name="name"]').fill(createdName);
+  await page.locator('button:has-text("Save")').click();
+
+  await expect(page).toHaveURL(/\/ui\/categories$/);
+  await expect(page.locator(".alert-success"))
+    .toContainText("Category created successfully");
+
+  // 2) FIND CREATED ROW
+  const createdRows = page.locator("table tbody tr", { hasText: createdName });
+  await expect(createdRows.first()).toBeVisible();
+  const createdRow = createdRows.last();
+
+  // ✅ Save parent before edit
+  const parentBefore = await createdRow.locator("td").nth(2).innerText();
+
+  // 3) OPEN EDIT PAGE
+  await createdRow.locator('a[title="Edit"]').click();
+  await expect(page).toHaveURL(/\/ui\/categories\/edit\/\d+/);
+
+  // 4) EDIT NAME ONLY
+  const updatedName = "EditedName";
+  const nameInput = page.locator('input[name="name"]');
+
+  await nameInput.click();
+  await nameInput.press("Control+A");
+  await nameInput.type(updatedName);
+
+  // 5) SAVE
+  await page.locator('button:has-text("Save")').click();
+
+  // 6) VERIFY REDIRECT
+  await expect(page).toHaveURL(/\/ui\/categories$/);
+
+  // 7) VERIFY SUCCESS MESSAGE
+  await expect(page.locator(".alert-success"))
+    .toContainText("Category updated successfully");
+
+  // 8) VERIFY UPDATED DATA
+  const updatedRows = page.locator("table tbody tr", { hasText: updatedName });
+  await expect(updatedRows.first()).toBeVisible();
+  const updatedRow = updatedRows.last();
+
+  const parentAfter = await updatedRow.locator("td").nth(2).innerText();
+  expect(parentAfter.trim()).toBe(parentBefore.trim());
+});
+
+//test 20
+test.only("UI_ADMIN_Category-20: should show length validation when editing category name < 3 chars", async ({
+  page,
+  baseURL,
+}) => {
+  // 1) CREATE CATEGORY
+  await page.goto(`${baseURL}/ui/categories/add`);
+  await page.waitForLoadState("networkidle");
+
+  const createdName = `EDITtest1`; // 
+  await page.locator('input[name="name"]').fill(createdName);
+  await page.locator('button:has-text("Save")').click();
+
+  await expect(page).toHaveURL(/\/ui\/categories$/);
+  await expect(page.locator(".alert-success")).toContainText(
+    "Category created successfully"
+  );
+
+  // 2) FIND CREATED ROW (handle duplicates safely)
+  const createdRows = page.locator("table tbody tr", { hasText: createdName });
+  await expect(createdRows.first()).toBeVisible();
+  const createdRow = createdRows.last();
+
+  // 3) OPEN EDIT PAGE
+  await createdRow.locator('a[title="Edit"]').click();
+  await expect(page).toHaveURL(/\/ui\/categories\/edit\/\d+/);
+
+  // 4) EDIT NAME ONLY
+  const updatedName = "ab";
+  const nameInput = page.locator('input[name="name"]');
+
+  await nameInput.click();
+  await nameInput.press("Control+A");
+  await nameInput.type(updatedName);
+
+  // 5) SAVE
+  await page.locator('button:has-text("Save")').click();
+
+  // 6) ASSERT VALIDATION
+  await expect(page.getByText("Category name must be between 3 and 10 characters")).toBeVisible();
+
+  // 7) STILL ON EDIT PAGE
+  await expect(page).toHaveURL(/\/ui\/categories\/edit\/\d+/);
+});
+
+//test 21
+
+//test 22
+
+
