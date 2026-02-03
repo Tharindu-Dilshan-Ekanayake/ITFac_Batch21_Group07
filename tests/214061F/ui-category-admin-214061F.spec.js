@@ -310,7 +310,7 @@ test("UI_ADMIN_Category-19: should edit category name and keep parent category d
 });
 
 //test 20
-test.only("UI_ADMIN_Category-20: should show length validation when editing category name < 3 chars", async ({
+test("UI_ADMIN_Category-20: should show length validation when editing category name < 3 chars", async ({
   page,
   baseURL,
 }) => {
@@ -357,5 +357,91 @@ test.only("UI_ADMIN_Category-20: should show length validation when editing cate
 //test 21
 
 //test 22
+test("UI_ADMIN_Category-22: should discard changes when clicking Cancel on Edit Category", async ({ page, baseURL }) => {
+  // ---------- 1) CREATE CATEGORY (precondition) ----------
+  await page.goto(`${baseURL}/ui/categories/add`);
+  await page.waitForLoadState("networkidle");
 
+  const originalName = `CANCEL`;
+  await page.locator('input[name="name"]').fill(originalName);
+  await page.locator('button:has-text("Save")').click();
+
+  await expect(page).toHaveURL(/\/ui\/categories$/);
+  await expect(page.locator(".alert-success")).toContainText(
+    "Category created successfully"
+  );
+
+  // ---------- 2) OPEN EDIT PAGE ----------
+  const createdRows = page.locator("table tbody tr", { hasText: originalName });
+  await expect(createdRows.first()).toBeVisible();
+  const createdRow = createdRows.last();
+
+  await createdRow.locator('a[title="Edit"]').click();
+  await expect(page).toHaveURL(/\/ui\/categories\/edit\/\d+/);
+
+  // ---------- 3) TYPE NEW TEXT (but do NOT save) ----------
+  const newName = `CheckCancel`;
+
+  const nameInput = page.locator('input[name="name"]');
+  await nameInput.click();
+  await nameInput.press("Control+A");
+  await nameInput.type(newName);
+
+  // ---------- 4) CLICK CANCEL ----------
+  // On edit page, Cancel is an <a> link, so use role/name
+  const cancelBtn = page.getByRole("link", { name: "Cancel" });
+  await expect(cancelBtn).toBeVisible();
+  await cancelBtn.click();
+
+  // ---------- 5) VERIFY NAVIGATED BACK ----------
+  await expect(page).toHaveURL(/\/ui\/categories$/);
+
+  // ---------- 6) VERIFY CHANGES NOT SAVED ----------
+  // Old name should still exist
+  await expect(page.locator("table")).toContainText(originalName);
+
+  // New name should NOT exist
+  await expect(page.locator("table")).not.toContainText(newName);
+});
+
+//test 23
+test("UI_ADMIN_Category-23: should show confirm dialog and delete category on OK", async ({ page, baseURL }) => {
+  // ---------- 1) CREATE A CATEGORY TO DELETE ----------
+  await page.goto(`${baseURL}/ui/categories/add`);
+  await page.waitForLoadState("networkidle");
+
+  const nameToDelete = `DEL-Test`;
+  await page.locator('input[name="name"]').fill(nameToDelete);
+  await page.getByRole("button", { name: "Save" }).click();
+
+  // Back to categories page
+  await expect(page).toHaveURL(/\/ui\/categories$/);
+  await expect(page.locator(".alert-success")).toContainText(/created successfully/i);
+
+  // Find the row (exact match on Name column)
+  const row = page.locator("table tbody tr", {
+    has: page.locator("td:nth-child(2)", { hasText: nameToDelete }),
+  });
+  await expect(row).toBeVisible();
+
+  // ---------- 2) SETUP CONFIRM DIALOG HANDLER (CLICK OK) ----------
+  page.once("dialog", async (dialog) => {
+    // Optional: verify confirmation message
+    expect(dialog.message().toLowerCase()).toContain("delete");
+    await dialog.accept(); // ✅ click OK
+  });
+
+  // ---------- 3) CLICK DELETE ICON IN THAT ROW ----------
+  // Delete is a <button> inside a <form action="/ui/categories/delete/{id}">
+  await row.locator('form[action*="/ui/categories/delete/"] button').click();
+
+  // ---------- 4) VERIFY SUCCESS + ROW REMOVED ----------
+  await expect(page.locator(".alert-success")).toContainText(/deleted successfully/i);
+
+  await expect(
+    page.locator("table tbody tr", {
+      has: page.locator("td:nth-child(2)", { hasText: nameToDelete }),
+    })
+  ).toHaveCount(0);
+});
 
