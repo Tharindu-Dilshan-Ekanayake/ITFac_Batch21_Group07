@@ -405,7 +405,7 @@ test("UI_ADMIN_Category-22: should discard changes when clicking Cancel on Edit 
 });
 
 //test 23
-test.only("UI_ADMIN_Category-23: should show confirm dialog and delete category on OK", async ({ page, baseURL }) => {
+test("UI_ADMIN_Category-23: should show confirm dialog and delete category on OK", async ({ page, baseURL }) => {
   // ---------- 1) CREATE A CATEGORY TO DELETE ----------
   await page.goto(`${baseURL}/ui/categories/add`);
   await page.waitForLoadState("networkidle");
