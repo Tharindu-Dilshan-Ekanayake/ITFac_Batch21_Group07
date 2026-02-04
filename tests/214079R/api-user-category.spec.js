@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { getAdminApiContext } from "../../utils/api-admin";
+import { getUserApiContext } from "../../utils/api-user";
 
 
-test("Get category by valid ID", async ({ baseURL }) => {
-    const context = await getAdminApiContext(baseURL);
+test("Get category by valid ID", async () => {
+    const context = await getUserApiContext();
     const response = await context.get(`/api/categories/6`); // ID 6 selected cause that item exists in the database
     expect(response.status()).toBe(200);
     const data = await response.json();
@@ -14,14 +14,14 @@ test("Get category by valid ID", async ({ baseURL }) => {
     expect(data).toHaveProperty("parentId");
 });
 
-test("Get category by invalid ID", async ({ baseURL }) => {
-    const context = await getAdminApiContext(baseURL);
+test("Get category by invalid ID", async () => {
+    const context = await getUserApiContext();
     const response = await context.get(`/api/categories/999`); // ID 999 selected cause that item does not exist in the database
     expect(response.status()).toBe(404);
 });
 
-test("Get sub-categories", async ({ baseURL }) => {
-    const context = await getAdminApiContext(baseURL);
+test("Get sub-categories", async () => {
+    const context = await getUserApiContext();
     const response = await context.get(`/api/categories/sub-categories`);
     expect(response.status()).toBe(200);
 
@@ -32,8 +32,8 @@ test("Get sub-categories", async ({ baseURL }) => {
     expect(data[0]).toHaveProperty("subCategories");
 });
 
-test("Search categories with pagination", async ({ baseURL }) => {
-    const context = await getAdminApiContext(baseURL);
+test("Search categories with pagination", async () => {
+    const context = await getUserApiContext();
     // Page count set to 0, items per page set to 10, and name set as anthuriam
     const response = await context.get(`api/categories/page?page=0&size=10&name=anthuriam`); 
     expect(response.status()).toBe(200);
@@ -50,4 +50,30 @@ test("Search categories with pagination", async ({ baseURL }) => {
     expect(data).toHaveProperty("first");
     expect(data).toHaveProperty("numberOfElements");
     expect(data).toHaveProperty("empty");
+});
+
+test("Get all categories", async () => {
+    const context = await getUserApiContext();
+    const response = await context.get(`/api/categories`);
+    // Response validation
+    expect(response.status()).toBe(200);
+
+    // Verify response have relevant properties
+    const data = await response.json();
+    expect(data[0]).toHaveProperty("id");
+    expect(data[0]).toHaveProperty("name");
+    expect(data[0]).toHaveProperty("parentName");
+});
+
+test("Prevent search categories with invalid pagination", async () => {
+    const context = await getUserApiContext();
+    // Page count set to -1, items per page set to 10, and name set as anthuriam
+    const response = await context.get(`api/categories/page?page=-1&size=10&name=anthuriam`); 
+
+    // Response validation
+    expect(response.status()).toBe(400);
+
+    // Verify response have correct error message
+    const data = await response.json();
+    expect(data.error).toBe("BAD_REQUEST");
 });
