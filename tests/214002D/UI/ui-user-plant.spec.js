@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("UI_User_Plants Module", () => {
-
   test.beforeEach(async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/ui/plants`);
     await page.locator("table").waitFor({ state: "visible" });
@@ -14,11 +13,21 @@ test.describe("UI_User_Plants Module", () => {
     await expect(page.locator("select[name='categoryId']")).toBeVisible();
     await expect(page.getByRole("button", { name: "Search" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Reset" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "Name" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "Category" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "Price" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "Stock" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "Actions" })).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "Name" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "Category" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "Price" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "Stock" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "Actions" }),
+    ).toBeVisible();
   });
 
   test("UI_User_Plants-02: Verify no plants data available", async ({
