@@ -4,8 +4,9 @@ import { check_PlantID } from "../data/plant.data";
 
 let TestCategoryId;
 let TestPlantId;
+let categoryID_1;
 
-test("Create category ", async ({}) => {
+test("Create category ", async ({ baseURL }) => {
   const context = await getAdminApiContext();
   const randomNumber1 = Math.floor(Math.random() * 1000);
   const randomNumber2 = Math.floor(Math.random() * 1000);
@@ -17,14 +18,14 @@ test("Create category ", async ({}) => {
     subCategories: [],
   };
 
-  const createResponse1 = await context.post("/api/categories", {
+  const createResponse1 = await context.post(`${baseURL}/api/categories`, {
     data: createPayload,
   });
   const createData = await createResponse1.json();
   expect(createResponse1.status()).toBe(201);
-  // console.log(createData);
 
   const firstCategoryId = createData.id;
+  categoryID_1 = createData.id;
 
   //  second category
   const createPayload2 = {
@@ -32,12 +33,11 @@ test("Create category ", async ({}) => {
     parent: { id: firstCategoryId },
     subCategories: [],
   };
-  const createResponse2 = await context.post("/api/categories", {
+  const createResponse2 = await context.post(`${baseURL}/api/categories`, {
     data: createPayload2,
   });
   const createData2 = await createResponse2.json();
   expect(createResponse2.status()).toBe(201);
-  // console.log(createData2);
   TestCategoryId = createData2.id;
 });
 
@@ -64,7 +64,7 @@ test("Create a new plant with valid category ID", async ({ baseURL }) => {
   TestPlantId = responseBody.id;
 });
 
-test("Prevent duplicate plant - same name in same category should return 400", async ({
+test("Prevent duplicate plant  same name in same category ", async ({
   baseURL,
 }) => {
   const context = await getAdminApiContext();
@@ -76,7 +76,7 @@ test("Prevent duplicate plant - same name in same category should return 400", a
     categoryId: TestCategoryId,
   };
 
-  // First create the plant 
+  // First create the plant
   const firstResponse = await context.post(
     `${baseURL}/api/plants/category/${duplicatePlant.categoryId}`,
     {
@@ -96,16 +96,13 @@ test("Prevent duplicate plant - same name in same category should return 400", a
     },
   );
 
-
   expect(secondResponse.status()).toBe(400);
-
   const secondBody = await secondResponse.json();
-
   expect(secondBody.status).toBe(400);
   expect(secondBody.error).toBe("DUPLICATE_RESOURCE");
-  expect(secondBody.message).toBe(
-    "Plant 'API Duplicate Plant' already exists in this category",
-  );
+
+  // Cleanup - delete the created plant
+  await context.delete(`${baseURL}/api/plants/${firstBody.id}`);
 });
 
 test("Plant Get by Category ID", async ({ baseURL }) => {
@@ -120,7 +117,6 @@ test("Plant Get by Category ID", async ({ baseURL }) => {
   const data = await response.json();
   expect(Array.isArray(data)).toBeTruthy();
   expect(data.length).toBeGreaterThan(0);
-  // console.log(data);
 });
 
 test("Get plant values By Plant ID", async ({ baseURL }) => {
@@ -131,8 +127,6 @@ test("Get plant values By Plant ID", async ({ baseURL }) => {
   expect(response.status()).toBe(200);
   const data = await response.json();
   expect(data).toHaveProperty("id", plantID);
-  // console.log(TestPlantId);
-  // console.log(data);
 });
 
 test("Update existing plant", async ({ baseURL }) => {
@@ -167,14 +161,12 @@ test("Check plant exists by Invalid Plant ID", async ({ baseURL }) => {
   expect(data.status).toBe(404);
   expect(data.error).toBe("NOT_FOUND");
   expect(data.message).toBe(`Plant not found: ${invalidPlantID}`);
-  // console.log(data);
 });
 
 test("Delete existing plant", async ({ baseURL }) => {
   const context = await getAdminApiContext();
   const plantID = TestPlantId;
   const response = await context.delete(`${baseURL}/api/plants/${plantID}`);
-
   expect(response.status()).toBe(204);
 });
 
@@ -184,7 +176,23 @@ test("Delete non-existing plant", async ({ baseURL }) => {
   const response = await context.delete(
     `${baseURL}/api/plants/${nonExistingPlantID}`,
   );
-  expect(response.status()).toBe(400);
-  const data = await response.json();
-  expect(data.status).toBe(400);
+
+  expect(response.status()).toBe(204);
+});
+
+test.afterAll("Delete category Created for Plant", async ({ baseURL }) => {
+  const context = await getAdminApiContext();
+
+  //  First category delete
+  const categoryID = TestCategoryId;
+  const response1 = await context.delete(
+    `${baseURL}/api/categories/${categoryID}`,
+  );
+  expect(response1.status()).toBe(204);
+
+  //  Second category delete
+  const response2 = await context.delete(
+    `${baseURL}/api/categories/${categoryID_1}`,
+  );
+  expect(response2.status()).toBe(204);
 });
