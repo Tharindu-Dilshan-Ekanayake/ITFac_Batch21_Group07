@@ -47,9 +47,6 @@ export default defineConfig({
     name: "admin-api-tests",
     dependencies: ["admin-api-setup"],
     testMatch: /api.*-admin-.*\.spec\.js/,
-    use: {
-      storageState: "admin-auth.json",
-    },
   },
 
   // USER UI TESTS
@@ -67,9 +64,6 @@ export default defineConfig({
     name: "user-api-tests",
     dependencies: ["user-api-setup"],
     testMatch: /api.*-user-.*\.spec\.js/,
-    use: {
-      storageState: "user-auth.json",
-    },
   },
 ]
 
