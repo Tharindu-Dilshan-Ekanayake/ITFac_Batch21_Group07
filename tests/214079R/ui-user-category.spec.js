@@ -53,14 +53,24 @@ test("Verify no categories data available",  async ({ page, baseURL }) => {
     // Verify no categories data available
     if (await rows.count() === 0) {
         await expect(emptyText).toBeVisible();
+    } else {
+        const searchInput = page.locator('input[name="name"]');
+        await searchInput.fill("invalid_name"); // Fill an invalid category name
+        const searchButton = page.locator("button:has-text('Search')");
+        await searchButton.click();
+
+        const emptyText = page.locator("text=No category found");
+        await expect(emptyText).toBeVisible(); 
     }
 });
 
 test("Search categories by valid category name", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/ui/categories`);
+    // Ensure data exists
+    const firstRowCategoryName = await page.locator('table tbody tr:first-child td:nth-child(2)').textContent();
 
     const searchInput = page.locator('input[name="name"]');
-    await searchInput.fill("basic");
+    await searchInput.fill(firstRowCategoryName);
     const searchButton = page.locator("button:has-text('Search')");
     await searchButton.click();
 
@@ -73,18 +83,17 @@ test("Search categories by valid category name", async ({ page, baseURL }) => {
     } else {
         // Verify category data is not empty and visible
         for (let i = 0; i < await rows.count(); i++) {
-            const nameCell = rows.nth(i).locator("td:nth-child(2)"); // Get the second column of table
-            await expect(nameCell).toHaveText(/basic|Basic/); // I chose these because in my database these values persist
+            const nameCell = rows.nth(i).locator("td:nth-child(2)");
+            await expect(nameCell).toHaveText(firstRowCategoryName);
         }
     }
-    
 });
 
 test("Search categories by invalid category name", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/ui/categories`);
 
     const searchInput = page.locator('input[name="name"]');
-    await searchInput.fill("invalid_input");
+    await searchInput.fill("invalid_input"); // Insert invalid category name
     const searchButton = page.locator("button:has-text('Search')");
     await searchButton.click();
 
@@ -94,35 +103,46 @@ test("Search categories by invalid category name", async ({ page, baseURL }) => 
 });
 
 test("Verify parent category filtering", async ({ page, baseURL }) => {
-    await page.goto(`${baseURL}/ui/categories`);
+  await page.goto(`${baseURL}/ui/categories`);
 
-    const parentFilter = page.locator('select[name="parentId"]');
-    await parentFilter.selectOption({ value: "11" });
-    const searchButton = page.locator("button:has-text('Search')");
-    await searchButton.click();
+  const parentFilter = page.locator('select[name="parentId"]');
+  const searchButton = page.locator("button:has-text('Search')");
+  const rows = page.locator("tbody tr");
+  const emptyText = page.locator("text=No category found");
 
-    const rows = page.locator("tbody tr");
-    const emptyText = page.locator("text=No category found");
+  // Get all options
+  const options = parentFilter.locator("option");
 
-    // Verify availability of category data
-    if (await rows.count() === 0) {
-        await expect(emptyText).toBeVisible();
-    } else {
-        // Verify category data is not empty and visible
-        for (let i = 0; i < await rows.count(); i++) {
-            const parentCell = rows.nth(i).locator("td:nth-child(3)"); // Get the third column of table
-            await expect(parentCell).toHaveText("anthuriam"); // I chose this because in my database this value persists
-        }
+  // Ensure there is at least one selectable parent
+  const optionCount = await options.count();
+  expect(optionCount).toBeGreaterThan(1);
+
+  // Select the first real parent option (index 1)
+  const selectedValue = await options.nth(1).getAttribute("value");
+  const selectedText = await options.nth(1).textContent();
+
+  await parentFilter.selectOption(selectedValue);
+  await searchButton.click();
+
+  // Assertion
+  if (await rows.count() === 0) {
+    await expect(emptyText).toBeVisible();
+  } else {
+    for (let i = 0; i < await rows.count(); i++) {
+      const parentCell = rows.nth(i).locator("td:nth-child(3)");
+      await expect(parentCell).toHaveText(selectedText.trim());
     }
-    
+  }
 });
 
 test("Verify reset button functionality", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/ui/categories`);
 
-    const parentFilter = page.locator('select[name="parentId"]');
-    await parentFilter.selectOption({ value: "11" });
+    // Ensure data exists
+    const firstRowCategoryName = await page.locator('table tbody tr:first-child td:nth-child(2)').textContent();
 
+    const searchInput = page.locator('input[name="name"]');
+    await searchInput.fill(firstRowCategoryName);
     const searchButton = page.locator("button:has-text('Search')");
     await searchButton.click();
 
@@ -137,8 +157,8 @@ test("Verify reset button functionality", async ({ page, baseURL }) => {
     } else {
         // Verify category data is not empty and visible
         for (let i = 0; i < await filteredRows.count(); i++) {
-            const parentCell = filteredRows.nth(i).locator("td:nth-child(3)"); // Get the third column of table
-            await expect(parentCell).toHaveText("anthuriam"); // I chose this because in my database this value persists
+            const parentCell = filteredRows.nth(i).locator("td:nth-child(2)"); // Get the second column of table
+            await expect(parentCell).toHaveText(firstRowCategoryName);
         }
     }
     
