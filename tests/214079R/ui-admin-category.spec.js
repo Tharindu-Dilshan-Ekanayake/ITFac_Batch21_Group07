@@ -55,14 +55,24 @@ test("Verify no categories data available",  async ({ page, baseURL }) => {
     // Verify no categories data available
     if (await rows.count() === 0) {
         await expect(emptyText).toBeVisible();
+    } else {
+        const searchInput = page.locator('input[name="name"]');
+        await searchInput.fill("invalid_name"); // Fill an invalid category name
+        const searchButton = page.locator("button:has-text('Search')");
+        await searchButton.click();
+
+        const emptyText = page.locator("text=No category found");
+        await expect(emptyText).toBeVisible(); 
     }
 });
 
 test("Search categories by valid category name", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/ui/categories`);
+    // Ensure data exists
+    const firstRowName = await page.locator('table tbody tr:first-child td:nth-child(2)').textContent();
 
     const searchInput = page.locator('input[name="name"]');
-    await searchInput.fill("basic");
+    await searchInput.fill(firstRowName);
     const searchButton = page.locator("button:has-text('Search')");
     await searchButton.click();
 
@@ -75,8 +85,8 @@ test("Search categories by valid category name", async ({ page, baseURL }) => {
     } else {
         // Verify category data is not empty and visible
         for (let i = 0; i < await rows.count(); i++) {
-            const nameCell = rows.nth(i).locator("td:nth-child(2)"); // Get the second column of table
-            await expect(nameCell).toHaveText(/basic|Basic/); // I chose these because in my database these values persist
+            const nameCell = rows.nth(i).locator("td:nth-child(2)");
+            await expect(nameCell).toHaveText(firstRowName);
         }
     }
     
@@ -96,35 +106,46 @@ test("Search categories by invalid category name", async ({ page, baseURL }) => 
 });
 
 test("Verify parent category filtering", async ({ page, baseURL }) => {
-    await page.goto(`${baseURL}/ui/categories`);
+  await page.goto(`${baseURL}/ui/categories`);
 
-    const parentFilter = page.locator('select[name="parentId"]');
-    await parentFilter.selectOption({ value: "2" });
-    const searchButton = page.locator("button:has-text('Search')");
-    await searchButton.click();
+  const parentFilter = page.locator('select[name="parentId"]');
+  const searchButton = page.locator("button:has-text('Search')");
+  const rows = page.locator("tbody tr");
+  const emptyText = page.locator("text=No category found");
 
-    const rows = page.locator("tbody tr");
-    const emptyText = page.locator("text=No category found");
+  // Get all options
+  const options = parentFilter.locator("option");
 
-    // Verify availability of category data
-    if (await rows.count() === 0) {
-        await expect(emptyText).toBeVisible();
-    } else {
-        // Verify category data is not empty and visible
-        for (let i = 0; i < await rows.count(); i++) {
-            const parentCell = rows.nth(i).locator("td:nth-child(3)"); // Get the third column of table
-            await expect(parentCell).toHaveText("Basic"); // I chose this because in my database this value persists
-        }
+  // Ensure there is at least one selectable parent
+  const optionCount = await options.count();
+  expect(optionCount).toBeGreaterThan(1);
+
+  // Select the first real parent option (index 1)
+  const selectedValue = await options.nth(1).getAttribute("value");
+  const selectedText = await options.nth(1).textContent();
+
+  await parentFilter.selectOption(selectedValue);
+  await searchButton.click();
+
+  // Assertion
+  if (await rows.count() === 0) {
+    await expect(emptyText).toBeVisible();
+  } else {
+    for (let i = 0; i < await rows.count(); i++) {
+      const parentCell = rows.nth(i).locator("td:nth-child(3)");
+      await expect(parentCell).toHaveText(selectedText.trim());
     }
-    
+  }
 });
 
 test("Verify reset button functionality", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/ui/categories`);
 
-    const parentFilter = page.locator('select[name="parentId"]');
-    await parentFilter.selectOption({ value: "2" });
+    // Ensure data exists
+    const firstRowCategoryName = await page.locator('table tbody tr:first-child td:nth-child(2)').textContent();
 
+    const searchInput = page.locator('input[name="name"]');
+    await searchInput.fill(firstRowCategoryName);
     const searchButton = page.locator("button:has-text('Search')");
     await searchButton.click();
 
@@ -139,8 +160,8 @@ test("Verify reset button functionality", async ({ page, baseURL }) => {
     } else {
         // Verify category data is not empty and visible
         for (let i = 0; i < await filteredRows.count(); i++) {
-            const parentCell = filteredRows.nth(i).locator("td:nth-child(3)"); // Get the third column of table
-            await expect(parentCell).toHaveText("Basic"); // I chose this because in my database this value persists
+            const parentCell = filteredRows.nth(i).locator("td:nth-child(2)"); // Get the second column of table
+            await expect(parentCell).toHaveText(firstRowCategoryName);
         }
     }
     
@@ -167,6 +188,7 @@ test("Sort categories by ID", async ({ page, baseURL }) => {
 
   // Click once → ASC
   await idHeader.click();
+
   // Targets the first <td> in every row
   const columnValues = await page.locator('table td:nth-child(1)').allInnerTexts();
   const sortedAsc = [...columnValues].sort((a, b) => Number(a) - Number(b));
@@ -174,7 +196,7 @@ test("Sort categories by ID", async ({ page, baseURL }) => {
   expect(columnValues).toEqual(sortedAsc);
   await expectArrow(idHeader, "down");
 
-  // Click again → DESC
+  // Click again to convert to DESC
   await idHeader.click();
   const descValues = await page.locator('table td:nth-child(1)').allInnerTexts();
   const sortedDesc = [...sortedAsc].reverse();
@@ -182,7 +204,7 @@ test("Sort categories by ID", async ({ page, baseURL }) => {
   await expectArrow(idHeader, "up");
 });
 
-// helper function to detect arrow 
+// helper function to detect arrow pointer
 async function expectArrow(headerLocator, direction) {
   const arrow = headerLocator.locator("span");
 
@@ -198,7 +220,7 @@ test("Sort categories by Name", async ({ page, baseURL }) => {
 
   const nameHeader = page.locator('th a:has-text("Name")');
 
-  // Click once → Z-A
+  // Click once to convert to Z-A
   await nameHeader.click();
   const descValues = await page.locator('table td:nth-child(2)').allInnerTexts();
   const normalizedDesc = descValues.map(v => v.trim().toLowerCase()); // convert all capital letters to lower
@@ -207,7 +229,7 @@ test("Sort categories by Name", async ({ page, baseURL }) => {
   expect(normalizedDesc).toEqual(expectedDesc);
   await expectArrow(nameHeader, "up");
 
-  // Click again → A-Z
+  // Click again to convert to A-Z
   await nameHeader.click();
   const ascValues = await page.locator('table td:nth-child(2)').allInnerTexts();
   const normalizedAsc = ascValues.map(v => v.trim().toLowerCase()); // convert all capital letters to lower
