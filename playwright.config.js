@@ -35,7 +35,7 @@ export default defineConfig({
   // ADMIN UI TESTS
   {
     name: "admin-ui-tests",
-    dependencies: ["admin-ui-setup"],
+    dependencies: ["admin-ui-setup", "admin-api-setup"],
     testMatch: /ui.*-admin-.*\.spec\.js/,
     use: {
       storageState: "admin-auth.json",
