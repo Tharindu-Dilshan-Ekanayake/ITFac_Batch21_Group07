@@ -59,7 +59,7 @@ test("UI_User_Categories-13: should show 'No category found' when no categories 
 
 //test 14
 
-test.only("UI_User_Categories-14: pagination works and each page has different data", async ({ page, baseURL }) => {
+test("UI_User_Categories-14: pagination works and each page has different data", async ({ page, baseURL }) => {
   await page.goto(`${baseURL}/ui/categories`);
   await page.waitForLoadState("networkidle");
 

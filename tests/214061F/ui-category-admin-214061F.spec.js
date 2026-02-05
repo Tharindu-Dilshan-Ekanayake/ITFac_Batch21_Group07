@@ -1,5 +1,31 @@
 // tests/admin-category.spec.js
 import { test, expect } from "@playwright/test";
+import dotenv from "dotenv";
+import { deleteCategoryAsAdmin } from "./functions/api-category-function-admin.js";
+
+dotenv.config();
+
+// Ensure admin is logged in for tests that need admin UI access
+async function ensureAdminLoggedIn(page, baseURL) {
+  await page.goto(`${baseURL}/ui/categories`);
+  await page.waitForLoadState("networkidle");
+
+  // If redirected to login, perform login and navigate back
+  if (page.url().includes("/ui/login")) {
+    const userName = page.locator('[name="username"]');
+    const password = page.locator('[name="password"]');
+    const signIn = page.locator('[type="submit"]');
+
+    await userName.fill(process.env.ADMIN_USERNAME || "admin");
+    await password.fill(process.env.ADMIN_PASSWORD || "admin123");
+    await signIn.click();
+
+    await page.waitForURL(`${baseURL}/ui/dashboard`);
+
+    await page.goto(`${baseURL}/ui/categories`);
+    await page.waitForLoadState("networkidle");
+  }
+}
 
 
 //test 10
@@ -144,16 +170,32 @@ test("UI_ADMIN_Category-14: should create a main category when parent category i
 
   // Expected: Parent column shows "-" (main category)
   await expect(newRow).toContainText("-");
+
+  // Cleanup: Delete created category via API
+  const editLink = newRow.locator('a[title="Edit"]');
+  const href = await editLink.getAttribute('href');
+  const categoryId = href?.match(/\/edit\/(\d+)/)?.[1];
+  if (categoryId) {
+    await deleteCategoryAsAdmin(categoryId);
+  }
 });
 
 //test 15
 test("UI_ADMIN_Category-15: create main category and then create sub-category under it", async ({ page, baseURL }) => {
+  await ensureAdminLoggedIn(page, baseURL);
   // Step 1: Create Main Category 
   const parentName = `PARENT`;
   await page.goto(`${baseURL}/ui/categories/add`);
   await page.locator('input[name="name"]').fill(parentName);
   await page.locator("button:has-text('Save')").click();
   await expect(page).toHaveURL(/\/ui\/categories/);
+
+  // Get parent ID for cleanup later
+  const parentRow = page.locator("table tbody tr", { hasText: parentName });
+  await expect(parentRow).toBeVisible();
+  const parentEditLink = parentRow.locator('a[title="Edit"]');
+  const parentHref = await parentEditLink.getAttribute('href');
+  const parentId = parentHref?.match(/\/edit\/(\d+)/)?.[1];
 
   // Step 2: Create Sub Category using Parent 
   const childName = `CHILD`;
@@ -167,12 +209,26 @@ test("UI_ADMIN_Category-15: create main category and then create sub-category un
 
   // Assertions 
   await expect(page.locator('.alert-success')).toBeVisible();
-  const row = page.locator("table tbody tr", { hasText: childName });
-  await expect(row).toContainText(parentName);
+  const childRow = page.locator("table tbody tr", { hasText: childName });
+  await expect(childRow).toContainText(parentName);
+
+  // Get child ID for cleanup
+  const childEditLink = childRow.locator('a[title="Edit"]');
+  const childHref = await childEditLink.getAttribute('href');
+  const childId = childHref?.match(/\/edit\/(\d+)/)?.[1];
+
+  // Cleanup: Delete child first, then parent
+  if (childId) {
+    await deleteCategoryAsAdmin(childId);
+  }
+  if (parentId) {
+    await deleteCategoryAsAdmin(parentId);
+  }
 });
 
 //test 16
 test("UI_ADMIN_Category-16: should discard changes and navigate back when Cancel is clicked", async ({ page, baseURL }) => {
+  await ensureAdminLoggedIn(page, baseURL);
   await page.goto(`${baseURL}/ui/categories/add`);
   await page.waitForLoadState("networkidle");
 
@@ -188,24 +244,43 @@ test("UI_ADMIN_Category-16: should discard changes and navigate back when Cancel
 
   // verify not saved
   await expect(page.locator("table")).not.toContainText(tempName);
+  
 });
 
 //test 17
-test("UI_ADMIN_Category-17: should display Edit button for categories", async ({
+test("UI_ADMIN_Category-17: should display Edit button for created category", async ({
   page,
   baseURL,
 }) => {
-  // Navigate to Categories page
-  await page.goto(`${baseURL}/ui/categories`);
+  await ensureAdminLoggedIn(page, baseURL);
+
+  // 1) CREATE A TEMP CATEGORY
+  const tempName = `EDitVis` ;
+  await page.goto(`${baseURL}/ui/categories/add`);
   await page.waitForLoadState("networkidle");
 
-  // Verify table is visible
-  const table = page.locator("table");
-  await expect(table).toBeVisible();
+  await page.locator('input[name="name"]').fill(tempName);
+  await page.locator('button:has-text("Save")').click();
 
-  // Verify at least one Edit button is visible
-  const editButton = page.locator('a[title="Edit"]').first();
-  await expect(editButton).toBeVisible();
+  await expect(page).toHaveURL(/\/ui\/categories$/);
+  await expect(page.locator('.alert-success')).toContainText(
+    /Category created successfully/i
+  );
+
+  // 2) FIND ROW FOR CREATED CATEGORY
+  const row = page.locator("table tbody tr", { hasText: tempName });
+  await expect(row).toBeVisible();
+
+  // 3) VERIFY EDIT BUTTON EXISTS FOR THAT ROW
+  const editLink = row.locator('a[title="Edit"]');
+  await expect(editLink).toBeVisible();
+
+  // 4) CLEANUP - DELETE CREATED CATEGORY VIA API
+  const href = await editLink.getAttribute('href');
+  const categoryId = href?.match(/\/edit\/(\d+)/)?.[1];
+  if (categoryId) {
+    await deleteCategoryAsAdmin(categoryId);
+  }
 });
 
 //test 18
@@ -213,6 +288,7 @@ test("UI_ADMIN_Category-18: should show validation error when category name is e
   page,
   baseURL,
 }) => {
+  await ensureAdminLoggedIn(page, baseURL);
   // 1) CREATE CATEGORY
   await page.goto(`${baseURL}/ui/categories/add`);
   await page.waitForLoadState("networkidle");
@@ -250,6 +326,13 @@ test("UI_ADMIN_Category-18: should show validation error when category name is e
 
   // 7) STILL ON EDIT PAGE
   await expect(page).toHaveURL(/\/ui\/categories\/edit\/\d+/);
+
+  // 8) CLEANUP - DELETE CREATED CATEGORY VIA API
+  const urlMatch = page.url().match(/\/ui\/categories\/edit\/(\d+)/);
+  const categoryId = urlMatch?.[1];
+  if (categoryId) {
+    await deleteCategoryAsAdmin(categoryId);
+  }
 });
 
 //test 19
@@ -257,6 +340,7 @@ test("UI_ADMIN_Category-19: should edit category name and keep parent category d
   page,
   baseURL,
 }) => {
+  await ensureAdminLoggedIn(page, baseURL);
 
   // 1) CREATE CATEGORY
   await page.goto(`${baseURL}/ui/categories/add`);
@@ -307,6 +391,14 @@ test("UI_ADMIN_Category-19: should edit category name and keep parent category d
 
   const parentAfter = await updatedRow.locator("td").nth(2).innerText();
   expect(parentAfter.trim()).toBe(parentBefore.trim());
+
+  // 9) CLEANUP - DELETE UPDATED CATEGORY VIA API
+  const editLinkAfter = updatedRow.locator('a[title="Edit"]');
+  const hrefAfter = await editLinkAfter.getAttribute('href');
+  const categoryIdAfter = hrefAfter?.match(/\/edit\/(\d+)/)?.[1];
+  if (categoryIdAfter) {
+    await deleteCategoryAsAdmin(categoryIdAfter);
+  }
 });
 
 //test 20
@@ -314,6 +406,7 @@ test("UI_ADMIN_Category-20: should show length validation when editing category 
   page,
   baseURL,
 }) => {
+  await ensureAdminLoggedIn(page, baseURL);
   // 1) CREATE CATEGORY
   await page.goto(`${baseURL}/ui/categories/add`);
   await page.waitForLoadState("networkidle");
@@ -352,12 +445,20 @@ test("UI_ADMIN_Category-20: should show length validation when editing category 
 
   // 7) STILL ON EDIT PAGE
   await expect(page).toHaveURL(/\/ui\/categories\/edit\/\d+/);
+
+  // CLEANUP - DELETE CREATED CATEGORY VIA API
+  const urlMatch20 = page.url().match(/\/ui\/categories\/edit\/(\d+)/);
+  const categoryId = urlMatch20?.[1];
+  if (categoryId) {
+    await deleteCategoryAsAdmin(categoryId);
+  }
 });
 
 //test 21
 
 //test 22
 test("UI_ADMIN_Category-22: should discard changes when clicking Cancel on Edit Category", async ({ page, baseURL }) => {
+  await ensureAdminLoggedIn(page, baseURL);
   // ---------- 1) CREATE CATEGORY (precondition) ----------
   await page.goto(`${baseURL}/ui/categories/add`);
   await page.waitForLoadState("networkidle");
@@ -402,10 +503,22 @@ test("UI_ADMIN_Category-22: should discard changes when clicking Cancel on Edit 
 
   // New name should NOT exist
   await expect(page.locator("table")).not.toContainText(newName);
+
+  // CLEANUP: Delete created category via API
+  const createdRowsAfter = page.locator("table tbody tr", { hasText: originalName });
+  await expect(createdRowsAfter.first()).toBeVisible();
+  const createdRowAfter = createdRowsAfter.last();
+  const editLink = createdRowAfter.locator('a[title="Edit"]');
+  const href = await editLink.getAttribute('href');
+  const categoryId = href?.match(/\/edit\/(\d+)/)?.[1];
+  if (categoryId) {
+    await deleteCategoryAsAdmin(categoryId);
+  }
 });
 
 //test 23
 test("UI_ADMIN_Category-23: should show confirm dialog and delete category on OK", async ({ page, baseURL }) => {
+  await ensureAdminLoggedIn(page, baseURL);
   // ---------- 1) CREATE A CATEGORY TO DELETE ----------
   await page.goto(`${baseURL}/ui/categories/add`);
   await page.waitForLoadState("networkidle");
