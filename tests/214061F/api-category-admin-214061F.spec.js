@@ -114,8 +114,8 @@ test("API_ADMIN-13: Prevent duplicate main category", async () => {
   // expect(errorBodyText.toLowerCase()).toContain("already");
 
   // 4) Cleanup (delete the first category)
-//   const delRes = await context.delete(`/api/categories/${created.id}`);
-//   expect([200, 204]).toContain(delRes.status());
+  const delRes = await context.delete(`/api/categories/${created.id}`);
+  expect([200, 204]).toContain(delRes.status());
 });
 
 //test 14
@@ -287,8 +287,8 @@ test("API_ADMIN-17: Update category (create then update name)", async () => {
   expect(fetched.name).toBe(updatedName);
 
   // ---------- 4) CLEANUP ----------
-//   const delRes = await context.delete(`/api/categories/${categoryId}`);
-//   expect(delRes.status(), await delRes.text()).toBe(204);
+  const delRes = await context.delete(`/api/categories/${categoryId}`);
+  expect(delRes.status(), await delRes.text()).toBe(204);
 });
 
 //test 18
