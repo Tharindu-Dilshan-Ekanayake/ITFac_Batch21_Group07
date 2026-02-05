@@ -1,6 +1,10 @@
 export const price = "250";
 export const quantityLow = "2";
 export const quantityNormal = "10";
+export const check_PlantID = "1001";
+
+
+
 
 export const generatePlantNames = () => {
   const timestamp = Date.now();
