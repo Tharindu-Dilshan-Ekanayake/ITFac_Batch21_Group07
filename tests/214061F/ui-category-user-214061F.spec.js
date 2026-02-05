@@ -1,34 +1,87 @@
 import { test, expect } from "@playwright/test";
+import dotenv from "dotenv";
+import {createCategoryAsAdmin,deleteCategoryAsAdmin} from "./functions/api-category-function-admin.js"; // for cleanup
 
-//test 11
-test("UI_User_Categories-11: Edit button should not be visible for user", async ({ page, baseURL }) => {
+dotenv.config();
+
+// Ensure normal user is logged in for UI tests
+async function ensureUserLoggedIn(page, baseURL) {
   await page.goto(`${baseURL}/ui/categories`);
   await page.waitForLoadState("networkidle");
 
-  await expect(page.getByRole("heading", { name: "Categories" })).toBeVisible();
+  if (page.url().includes("/ui/login")) {
+    const userName = page.locator('[name="username"]');
+    const password = page.locator('[name="password"]');
+    const signIn = page.locator('[type="submit"]');
 
-  // prove it's USER view
-  await expect(page.getByRole("link", { name: /Add A Category/i })).toHaveCount(0);
-  await expect(page.getByRole("columnheader", { name: "Actions" })).toHaveCount(0);
+    await userName.fill(process.env.USER_USERNAME || "testuser");
+    await password.fill(process.env.USER_PASSWORD || "test123");
+    await signIn.click();
 
-  await expect(page.locator('a[title="Edit"]')).toHaveCount(0);
+    await page.waitForURL(`${baseURL}/ui/dashboard`);
+
+    await page.goto(`${baseURL}/ui/categories`);
+    await page.waitForLoadState("networkidle");
+  }
+}
+
+//test 11
+test("UI_User_Categories-11: Edit button should not be visible for user", async ({ page, baseURL }) => {
+  // 1) Create a category via ADMIN API so there is data
+  const created = await createCategoryAsAdmin("EDITBT"); // 6 chars, valid
+  const categoryId = created.id;
+
+  try {
+    // 2) Ensure USER is logged in and on categories page
+    await ensureUserLoggedIn(page, baseURL);
+
+    await expect(page.getByRole("heading", { name: "Categories" })).toBeVisible();
+
+    // prove it's USER view: no Add Category link
+    await expect(page.getByRole("link", { name: /Add A Category/i })).toHaveCount(0);
+
+    // optional: ensure our created category is visible somewhere in the table
+    await expect(page.locator("table tbody tr", { hasText: "EDITBT" })).toBeVisible();
+
+    // main check: no Edit buttons in the table for user
+    await expect(page.locator('table tbody tr a[title="Edit"]')).toHaveCount(0);
+  } finally {
+    // 3) Cleanup via ADMIN API
+    if (categoryId) {
+      await deleteCategoryAsAdmin(categoryId);
+    }
+  }
 });
 
 //test 12
 test("UI_User_Categories-12: Delete button should not be visible for user", async ({ page, baseURL }) => {
-  await page.goto(`${baseURL}/ui/categories`);
-  await page.waitForLoadState("networkidle");
+  // 1) Create a category via ADMIN API so there is data
+  const created = await createCategoryAsAdmin("DELTEST"); // 7 chars, valid
+  const categoryId = created.id;
 
-  await expect(page.getByRole("heading", { name: "Categories" })).toBeVisible();
+  try {
+    // 2) Ensure USER is logged in and on categories page
+    await ensureUserLoggedIn(page, baseURL);
 
-  // prove it's USER view
-  await expect(page.getByRole("link", { name: /Add A Category/i })).toHaveCount(0);
-  await expect(page.getByRole("columnheader", { name: "Actions" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Categories" })).toBeVisible();
 
-  await expect(page.locator('form[action*="/ui/categories/delete"]')).toHaveCount(0);
+    // prove it's USER view: no Add Category link
+    await expect(page.getByRole("link", { name: /Add A Category/i })).toHaveCount(0);
+
+    // optional: ensure our created category is visible somewhere in the table
+    await expect(page.locator("table tbody tr", { hasText: "DELTEST" })).toBeVisible();
+
+    // main check: no Delete buttons/forms in the table for user
+    await expect(
+      page.locator('table tbody tr form[action*="/ui/categories/delete"]')
+    ).toHaveCount(0);
+  } finally {
+    // 3) Cleanup via ADMIN API
+    if (categoryId) {
+      await deleteCategoryAsAdmin(categoryId);
+    }
+  }
 });
-
-// logout and login  admin side
 
 //test 13
 test("UI_User_Categories-13: should show 'No category found' when no categories exist", async ({
@@ -36,8 +89,7 @@ test("UI_User_Categories-13: should show 'No category found' when no categories 
   baseURL,
 }) => {
   // 1️⃣ Navigate to Categories page as USER
-  await page.goto(`${baseURL}/ui/categories`);
-  await page.waitForLoadState("networkidle");
+  await ensureUserLoggedIn(page, baseURL);
 
   // 2️Verify Categories page loaded
   await expect(
@@ -58,69 +110,82 @@ test("UI_User_Categories-13: should show 'No category found' when no categories 
 });
 
 //test 14
-
 test("UI_User_Categories-14: pagination works and each page has different data", async ({ page, baseURL }) => {
-  await page.goto(`${baseURL}/ui/categories`);
-  await page.waitForLoadState("networkidle");
+  const createdCategoryIds = [];
+  try {
+    // Create 12 categories for pagination test
+    for (let i = 1; i <= 12; i++) {
+      const categoryName = `Pagi${i}`;
+      const created = await createCategoryAsAdmin(categoryName);
+      if (created && created.id) {
+        createdCategoryIds.push(created.id);
+      }
+    }
 
-  const table = page.locator("table");
-  await expect(table).toBeVisible();
+    await ensureUserLoggedIn(page, baseURL);
 
-  const pagination = page.locator("ul.pagination");
-  await expect(pagination).toBeVisible();
+    const table = page.locator("table");
+    await expect(table).toBeVisible();
 
-  const pageLinks = pagination.locator("a.page-link").filter({ hasText: /^\d+$/ });
-  const pageCount = await pageLinks.count();
+    const pagination = page.locator("ul.pagination");
+    await expect(pagination).toBeVisible();
 
-  if (pageCount <= 1) test.skip(true, "Only one page exists, cannot validate pagination differences.");
+    const pageLinks = pagination.locator("a.page-link").filter({ hasText: /^\d+$/ });
+    const pageCount = await pageLinks.count();
 
-  const getIdsOnCurrentPage = async () => {
-    const rows = table.locator("tbody tr");
+    if (pageCount <= 1) test.skip(true, "Only one page exists, cannot validate pagination differences.");
 
-    if (await rows.filter({ hasText: /no category found/i }).count()) return [];
+    const getIdsOnCurrentPage = async () => {
+      const rows = table.locator("tbody tr");
 
-    const ids = await rows.locator("td:nth-child(1)").allInnerTexts();
-    return ids.map((x) => x.trim()).filter(Boolean);
-  };
+      if (await rows.filter({ hasText: /no category found/i }).count()) return [];
 
-  const pageData = [];
+      const ids = await rows.locator("td:nth-child(1)").allInnerTexts();
+      return ids.map((x) => x.trim()).filter(Boolean);
+    };
 
-  for (let i = 0; i < pageCount; i++) {
-    const link = pageLinks.nth(i);
+    const pageData = [];
 
-    // ✅ read expected href before click
-    const href = await link.getAttribute("href");
-    expect(href).toBeTruthy();
+    for (let i = 0; i < pageCount; i++) {
+      const link = pageLinks.nth(i);
 
-    await link.click();
-    await page.waitForLoadState("networkidle");
+      // read expected href before click
+      const href = await link.getAttribute("href");
+      expect(href).toBeTruthy();
 
-    // ✅ verify URL contains that href
-    await expect(page).toHaveURL(new RegExp(href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+      await link.click();
+      await page.waitForLoadState("networkidle");
 
-    const ids = await getIdsOnCurrentPage();
-    expect(ids.length).toBeGreaterThan(0);
+      // verify URL contains that href
+      await expect(page).toHaveURL(new RegExp(href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 
-    pageData.push({ label: await link.innerText(), ids });
-  }
+      const ids = await getIdsOnCurrentPage();
+      expect(ids.length).toBeGreaterThan(0);
 
-  // ✅ compare pages: must be different
-  for (let i = 0; i < pageData.length - 1; i++) {
-    const setA = new Set(pageData[i].ids);
-    const setB = new Set(pageData[i + 1].ids);
+      pageData.push({ label: await link.innerText(), ids });
+    }
 
-    const overlap = [...setA].filter((id) => setB.has(id));
-    expect(overlap, `Overlap between page ${pageData[i].label} and ${pageData[i + 1].label}: ${overlap.join(", ")}`)
-      .toHaveLength(0);
+    // compare pages: must be different
+    for (let i = 0; i < pageData.length - 1; i++) {
+      const setA = new Set(pageData[i].ids);
+      const setB = new Set(pageData[i + 1].ids);
+
+      const overlap = [...setA].filter((id) => setB.has(id));
+      expect(overlap, `Overlap between page ${pageData[i].label} and ${pageData[i + 1].label}: ${overlap.join(", ")}`)
+        .toHaveLength(0);
+    }
+  } finally {
+    // Cleanup: delete all created categories
+    for (const categoryId of createdCategoryIds) {
+      await deleteCategoryAsAdmin(categoryId);
+    }
   }
 });
-
 
 //test 15
 test("UI_User_Categories-15: Add Category button should not be visible for user", async ({ page, baseURL }) => {
   // 1) Navigate to Categories page as USER
-  await page.goto(`${baseURL}/ui/categories`);
-  await page.waitForLoadState("networkidle");
+  await ensureUserLoggedIn(page, baseURL);
 
   // 2) Categories heading visible
   await expect(page.getByRole("heading", { name: "Categories" })).toBeVisible();
