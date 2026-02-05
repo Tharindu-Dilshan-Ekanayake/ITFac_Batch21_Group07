@@ -144,6 +144,8 @@ test("UI_ADMIN_Category-14: should create a main category when parent category i
 
   // Expected: Parent column shows "-" (main category)
   await expect(newRow).toContainText("-");
+
+  // Cleanup: Delete created category (optional)
 });
 
 //test 15

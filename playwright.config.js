@@ -62,7 +62,7 @@ export default defineConfig({
   // USER API TESTS
   {
     name: "user-api-tests",
-    dependencies: ["user-api-setup"],
+    dependencies: ["user-api-setup", "admin-api-setup"],
     testMatch: /api.*-user-.*\.spec\.js/,
   },
 ]
