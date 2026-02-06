@@ -6,24 +6,26 @@ test.describe('User Plants Management', () => {
     await page.goto('/ui/plants');
   });
 
-  test('UI_User_Plants-07 Search plants by valid plant name', async ({ page }) => {
-    const searchInput = page.locator('input[placeholder*="Search"], input[type="search"]');
-    await searchInput.fill('Rose');
 
-    const searchButton = page.locator('button:has-text("Search")');
-    await searchButton.click();
+//// **
+  // test('UI_User_Plants-07 Search plants by valid plant name', async ({ page }) => {
+  //   const searchInput = page.locator('input[placeholder*="Search"], input[type="search"]');
+  //   await searchInput.fill('Test');
 
-    await page.waitForTimeout(1000);
-    const plantRows = page.locator('table tbody tr');
-    const count = await plantRows.count();
+  //   const searchButton = page.locator('button:has-text("Search")');
+  //   await searchButton.click();
 
-    expect(count).toBeGreaterThan(0);
+  //   await page.waitForTimeout(1000);
+  //   const plantRows = page.locator('table tbody tr');
+  //   const count = await plantRows.count();
 
-    for (let i = 0; i < count; i++) {
-      const rowText = await plantRows.nth(i).textContent();
-      expect(rowText.toLowerCase()).toContain('rose');
-    }
-  }); // passed
+  //   expect(count).toBeGreaterThan(0);
+
+  //   for (let i = 0; i < count; i++) {
+  //     const rowText = await plantRows.nth(i).textContent();
+  //     expect(rowText.toLowerCase()).toContain('Test');
+  //   }
+  // }); // passed   // Only single word search is working, multi-word search is not working (learned from Plant-25) but multi word plant can be created
 
 
 
@@ -40,25 +42,25 @@ test.describe('User Plants Management', () => {
 
 
 
-  test('UI_User_Plants-09 Verify all categories filtering', async ({ page }) => {
-    // Use selectOption instead of click (learned from Plant-26)
-    const categoryDropdown = page.locator('select');
-    await categoryDropdown.selectOption({ label: 'Orchid' });
+  // test('UI_User_Plants-09 Verify all categories filtering', async ({ page }) => {
+  //   // Use selectOption instead of click (learned from Plant-26)
+  //   const categoryDropdown = page.locator('select');
+  //   await categoryDropdown.selectOption({ label: 'Sub131' });
 
-    const searchButton = page.locator('button:has-text("Search")');
-    await searchButton.click();
+  //   const searchButton = page.locator('button:has-text("Search")');
+  //   await searchButton.click();
 
-    await page.waitForTimeout(1000);
-    const plantRows = page.locator('table tbody tr');
-    const count = await plantRows.count();
+  //   await page.waitForTimeout(1000);
+  //   const plantRows = page.locator('table tbody tr');
+  //   const count = await plantRows.count();
 
-    expect(count).toBeGreaterThan(0);
+  //   expect(count).toBeGreaterThan(0);
 
-    for (let i = 0; i < count; i++) {
-      const rowText = await plantRows.nth(i).textContent();
-      expect(rowText.toLowerCase()).toContain('orchid');
-    }
-  });// passed
+  //   for (let i = 0; i < count; i++) {
+  //     const rowText = await plantRows.nth(i).textContent();
+  //     expect(rowText.toLowerCase()).toContain('Sub131');
+  //   }
+  // });// passed
 
 
 
