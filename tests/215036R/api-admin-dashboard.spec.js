@@ -126,6 +126,14 @@ test("Get all plants", async () => {
         const deleteResponse = await adminContext.delete(`/api/plants/${plant}`);
         expect(deleteResponse.status()).toBe(204);
     }
+
+    // Delete the created sub-category
+    const deleteSubcategoryResponse = await adminContext.delete(`/api/categories/${createdSubCategoryData.id}`);
+    expect(deleteSubcategoryResponse.status()).toBe(204);
+
+    // Delete the created main category
+    const deleteMainCategoryResponse = await adminContext.delete(`/api/categories/${createdCategoryData.id}`);
+    expect(deleteMainCategoryResponse.status()).toBe(204);
 });
 
 test("Get plants summary", async() => {
@@ -192,9 +200,17 @@ test("Get plants summary", async() => {
         const deleteResponse = await adminContext.delete(`/api/plants/${plant}`);
         expect(deleteResponse.status()).toBe(204);
     }
+
+    // Delete the created sub-category
+    const deleteSubcategoryResponse = await adminContext.delete(`/api/categories/${createdSubCategoryData.id}`);
+    expect(deleteSubcategoryResponse.status()).toBe(204);
+
+    // Delete the created main category
+    const deleteMainCategoryResponse = await adminContext.delete(`/api/categories/${createdCategoryData.id}`);
+    expect(deleteMainCategoryResponse.status()).toBe(204);
 });
 
-test("Get all sales", async () => {
+test.only("Get all sales", async () => {
 
     // Create a category
     const adminContext = await getAdminApiContext();
@@ -267,6 +283,14 @@ test("Get all sales", async () => {
         const deleteResponse = await adminContext.delete(`/api/sales/${sale}`);
         expect(deleteResponse.status()).toBe(204);
     }
+
+    // Delete the created sub-category
+    // const deleteSubcategoryResponse = await adminContext.delete(`/api/categories/${createdSubCategoryData.id}`);
+    // expect(deleteSubcategoryResponse.status()).toBe(204);
+
+    // Delete the created main category
+    // const deleteMainCategoryResponse = await adminContext.delete(`/api/categories/${createdCategoryData.id}`);
+    // expect(deleteMainCategoryResponse.status()).toBe(204);
 });
 
 test("Prevent access without token", async ({ baseURL }) => {

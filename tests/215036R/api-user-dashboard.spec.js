@@ -56,6 +56,7 @@ const createSubCategory = async (createdCategoryIds) => {
     const categoryIds = createdCategoryIds;
     let randomNumber = Math.floor(Math.random() * 1000);
 
+    const createdSubCategoryIds = [];
     // Create 10 sub-categories
     for(let i = 0; i < 10; i++) {
         const createPayload = {
@@ -67,15 +68,16 @@ const createSubCategory = async (createdCategoryIds) => {
         });
         expect(createResponse.status()).toBe(201);
         const data = await createResponse.json();
+        createdSubCategoryIds.push(data.id);
         randomNumber++;
     }
-    return ;
+    return createdSubCategoryIds;
 };
 
 test("Get category summary", async () => {
     // Wait for create categories and sub-categories
     const createdCategoryIds = await createCategory();
-    await createSubCategory(createdCategoryIds);
+    const createdSubCategoryIds = await createSubCategory(createdCategoryIds);
     
     const userContext = await getUserApiContext();
     const userResponse = await userContext.get(`/api/categories/summary`);
@@ -85,6 +87,19 @@ test("Get category summary", async () => {
     // Response validation
     expect(userData).toHaveProperty("mainCategories");
     expect(userData).toHaveProperty("subCategories");
+ 
+    // Delete the created sub-categories
+    const adminContext = await getAdminApiContext();
+    for(const id of createdSubCategoryIds) {
+        const deleteResponse = await adminContext.delete(`/api/categories/${id}`);
+        expect(deleteResponse.status()).toBe(204);
+    };
+
+    // Delete the created main categories
+    for(const id of createdCategoryIds) {
+        const deleteResponse = await adminContext.delete(`/api/categories/${id}`);
+        expect(deleteResponse.status()).toBe(204);
+    };
 });
 
 test("Get all plants", async () => {
@@ -153,6 +168,14 @@ test("Get all plants", async () => {
         const deleteResponse = await adminContext.delete(`/api/plants/${plant}`);
         expect(deleteResponse.status()).toBe(204);
     }
+
+    // Delete the created sub-category
+    const deleteSubcategoryResponse = await adminContext.delete(`/api/categories/${createdSubCategoryData.id}`);
+    expect(deleteSubcategoryResponse.status()).toBe(204);
+
+    // Delete the created main category
+    const deleteMainCategoryResponse = await adminContext.delete(`/api/categories/${createdCategoryData.id}`);
+    expect(deleteMainCategoryResponse.status()).toBe(204);
 });
 
 
@@ -221,6 +244,14 @@ test("Get plants summary", async() => {
         const deleteResponse = await adminContext.delete(`/api/plants/${plant}`);
         expect(deleteResponse.status()).toBe(204);
     }
+
+    // Delete the created sub-category
+        const deleteSubcategoryResponse = await adminContext.delete(`/api/categories/${createdSubCategoryData.id}`);
+        expect(deleteSubcategoryResponse.status()).toBe(204);
+
+    // Delete the created main category
+        const deleteMainCategoryResponse = await adminContext.delete(`/api/categories/${createdCategoryData.id}`);
+        expect(deleteMainCategoryResponse.status()).toBe(204);
 });
 
 test("Get all sales", async () => {
@@ -297,6 +328,14 @@ test("Get all sales", async () => {
         const deleteResponse = await adminContext.delete(`/api/sales/${sale}`);
         expect(deleteResponse.status()).toBe(204);
     }
+
+    // Delete the created sub-category
+    // const deleteSubcategoryResponse = await adminContext.delete(`/api/categories/${createdSubCategoryData.id}`);
+    // expect(deleteSubcategoryResponse.status()).toBe(204);
+
+    // Delete the created main category
+    // const deleteMainCategoryResponse = await adminContext.delete(`/api/categories/${createdCategoryData.id}`);
+    // expect(deleteMainCategoryResponse.status()).toBe(204);
 });
 
 test("Prevent access without token", async ({ baseURL }) => {
