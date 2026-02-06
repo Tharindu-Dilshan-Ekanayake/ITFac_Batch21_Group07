@@ -1,9 +1,0 @@
-const {test} = require('@playwright/test');
-
-test('First Playwright test', async  () =>
-{
-});
-
-test.only('Second Playwright test', async  () =>
-{
-});

@@ -1,81 +1,71 @@
 // @ts-check
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from "@playwright/test";
 
-/**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// import dotenv from 'dotenv';
-// import path from 'path';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
-
-/**
- * @see https://playwright.dev/docs/test-configuration
- */
 export default defineConfig({
-  testDir: './tests',
-  /* Run tests in files in parallel */
-  fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
-  forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  testDir: "./tests",
+  reporter: [["html"], ["allure-playwright", { outputFolder: "allure-report" }]],
   use: {
-    /* Base URL to use in actions like `await page.goto('')`. */
-    // baseURL: 'http://localhost:3000',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    baseURL: process.env.BASE_URL,
+    browserName: "chromium",
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+    trace: "on-first-retry",
+    headless: false,
   },
 
-  /* Configure projects for major browsers */
   projects: [
+    // UI SETUP
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: "admin-ui-setup",
+      testMatch: /admin\.ui\.setup\.js/,
+    },
+    {
+      name: "user-ui-setup",
+      testMatch: /user\.ui\.setup\.js/,
     },
 
+    // API SETUP
     {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      name: "admin-api-setup",
+      testMatch: /admin\.api\.setup\.js/,
+    },
+    {
+      name: "user-api-setup",
+      testMatch: /user\.api\.setup\.js/,
     },
 
+    // ADMIN UI TESTS
     {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      name: "admin-ui-tests",
+      dependencies: ["admin-ui-setup", "admin-api-setup"],
+      testMatch: /ui.*-admin-.*\.spec\.js/,
+      use: {
+        storageState: "admin-auth.json",
+      },
     },
 
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
+    // ADMIN API TESTS
+    {
+      name: "admin-api-tests",
+      dependencies: ["admin-api-setup"],
+      testMatch: /api.*-admin-.*\.spec\.js/,
+    },
 
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
+    // USER UI TESTS
+    {
+      name: "user-ui-tests",
+      dependencies: ["user-ui-setup"],
+      testMatch: /ui.*-user-.*\.spec\.js/,
+      use: {
+        storageState: "user-auth.json",
+      },
+    },
+
+    // USER API TESTS
+    {
+      name: "user-api-tests",
+      dependencies: ["user-api-setup", "admin-api-setup"],
+      testMatch: /api.*-user-.*\.spec\.js/,
+    },
   ],
-
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
 });
-
