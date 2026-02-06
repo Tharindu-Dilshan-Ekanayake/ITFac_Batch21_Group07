@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",
@@ -13,11 +12,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-
   "devDependencies": {
     "@cucumber/cucumber": "^11.3.0",
     "@playwright/test": "^1.58.0",
     "@types/node": "^25.0.10",
+    "allure-commandline": "^2.36.0",
+    "allure-playwright": "^3.4.5",
     "playwright": "^1.58.0"
   },
   "dependencies": {
