@@ -1,6 +1,5 @@
 const { Given, When, Then } = require("@cucumber/cucumber");
 const { expect, request } = require("@playwright/test");
-const fs = require("fs");
 const dotenv = require("dotenv");
 
 dotenv.config();
@@ -8,9 +7,18 @@ dotenv.config();
 const BASE_URL = process.env.BASE_URL || "http://localhost:8080";
 
 Given("I am an authenticated user via API", async function () {
-  const { token } = JSON.parse(
-    fs.readFileSync("user-token.json", "utf-8")
-  );
+  // Log in fresh to get a valid USER token (do not rely on user-token.json)
+  const loginContext = await request.newContext({ baseURL: BASE_URL });
+  const loginRes = await loginContext.post("/api/auth/login", {
+    data: {
+      username: process.env.USER_USERNAME,
+      password: process.env.USER_PASSWORD,
+    },
+  });
+
+  expect(loginRes.status(), await loginRes.text()).toBe(200);
+  const loginBody = await loginRes.json();
+  const token = loginBody.token;
 
   this.apiContext = await request.newContext({
     baseURL: BASE_URL,
