@@ -20,6 +20,7 @@ Feature: User Dashboard API
     Then the response status should be 200
     And the summary response should have mainCategories property
     And the summary response should have subCategories property
+    When admin deletes created sub-categories and main categories
 
   @api @user @dashboard
   Scenario: API_USER_DASHBOARD-03: Get all plants
@@ -31,6 +32,7 @@ Feature: User Dashboard API
     And the plants response should be an array
     And the plants response should have items greater than 0
     When admin deletes all created plants
+    When admin deletes created sub-categories and main categories
 
   @api @user @dashboard
   Scenario: API_USER_DASHBOARD-04: Get plants summary
@@ -42,6 +44,7 @@ Feature: User Dashboard API
     And the plants summary should have totalPlants property
     And the plants summary should have lowStockPlants property
     When admin deletes all created plants
+    When admin deletes created sub-categories and main categories
 
   @api @user @dashboard
   Scenario: API_USER_DASHBOARD-05: Get all sales

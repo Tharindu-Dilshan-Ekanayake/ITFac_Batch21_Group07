@@ -20,6 +20,7 @@ Feature: Admin Dashboard API
     And the plants response should be an array
     And the plants response should have items greater than 0
     When admin deletes all created plants
+    When admin deletes created sub-categories and main categories
 
   @api @admin @dashboard
   Scenario: API_ADMIN_DASHBOARD-03: Get plants summary
@@ -31,6 +32,7 @@ Feature: Admin Dashboard API
     And the plants summary should have totalPlants property
     And the plants summary should have lowStockPlants property
     When admin deletes all created plants
+    When admin deletes created sub-categories and main categories
 
   @api @admin @dashboard
   Scenario: API_ADMIN_DASHBOARD-04: Get all sales

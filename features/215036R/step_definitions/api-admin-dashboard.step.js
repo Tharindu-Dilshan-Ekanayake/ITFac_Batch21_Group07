@@ -167,6 +167,30 @@ When("admin deletes all created plants", async function () {
   createdPlantsIds = [];
 });
 
+When("admin deletes created sub-categories and main categories", async function () {
+  if (!adminContext) {
+    adminContext = await getAdminApiContext(this.baseUrl);
+  }
+
+  // Delete sub-categories first
+  if (Array.isArray(createdSubCategoryIds) && createdSubCategoryIds.length > 0) {
+    for (const id of createdSubCategoryIds) {
+      const deleteResponse = await adminContext.delete(`/api/categories/${id}`);
+      expect([204,200]).toContain(deleteResponse.status());
+    }
+    createdSubCategoryIds = [];
+  }
+
+  // Delete main categories
+  if (Array.isArray(createdCategoryIds) && createdCategoryIds.length > 0) {
+    for (const id of createdCategoryIds) {
+      const deleteResponse = await adminContext.delete(`/api/categories/${id}`);
+      expect([204,200]).toContain(deleteResponse.status());
+    }
+    createdCategoryIds = [];
+  }
+});
+
 When("admin creates 10 plants with varying quantities", async function () {
   createdPlantsIds = [];
   let randomNumber = Math.floor(Math.random() * 10000);
