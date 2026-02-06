@@ -1,400 +1,470 @@
-const { Given, When, Then, Before, After } = require("@cucumber/cucumber");
-const { expect, request } = require("@playwright/test");
+import { Given, When, Then, After } from "@cucumber/cucumber";
+import { expect, request } from "@playwright/test";
+import dotenv from "dotenv";
 
-// Load authentication
-const userAuth = require("../../../user-auth.json");
-const adminAuth = require("../../../admin-auth.json");
+dotenv.config();
 
-// Store context and data for the scenario
-let userContext = null;
-let adminContext = null;
-let createdCategoryIds = [];
-let createdSubCategoryIds = [];
-let createdPlantsIds = [];
-let createdSalesIds = [];
-let lastResponse = null;
-let lastResponseData = null;
+const BASE_URL = process.env.BASE_URL || "http://localhost:8080";
 
-Given("I am a user with valid API token", async function () {
-  userContext = await getUserApiContext(this.baseUrl);
+// Helper: get fresh USER context
+async function getUserApiContext() {
+  const loginContext = await request.newContext({ baseURL: BASE_URL });
+  const loginRes = await loginContext.post("/api/auth/login", {
+    data: {
+      username: process.env.USER_USERNAME,
+      password: process.env.USER_PASSWORD,
+    },
+  });
+
+  expect(loginRes.status(), await loginRes.text()).toBe(200);
+  const loginBody = await loginRes.json();
+  const token = loginBody.token;
+
+  return await request.newContext({
+    baseURL: BASE_URL,
+    extraHTTPHeaders: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+// Helper: get fresh ADMIN context
+async function getAdminApiContext() {
+  const loginContext = await request.newContext({ baseURL: BASE_URL });
+  const loginRes = await loginContext.post("/api/auth/login", {
+    data: {
+      username: process.env.ADMIN_USERNAME,
+      password: process.env.ADMIN_PASSWORD,
+    },
+  });
+
+  expect(loginRes.status(), await loginRes.text()).toBe(200);
+  const loginBody = await loginRes.json();
+  const token = loginBody.token;
+
+  return await request.newContext({
+    baseURL: BASE_URL,
+    extraHTTPHeaders: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+// ---------- GIVEN ----------
+
+Given("I have a valid user token 215036R_UserApi", async function () {
+  this.apiContext = await getUserApiContext();
 });
 
-When("admin creates 10 categories", async function () {
-  adminContext = await getAdminApiContext(this.baseUrl);
-  createdCategoryIds = [];
-  
-  let randomNumber = Math.floor(Math.random() * 10000);
-  
-  for (let i = 0; i < 10; i++) {
+// ---------- WHEN ----------
+
+When(
+  "I create {int} categories as admin 215036R_UserApi",
+  async function (count) {
+    const adminContext = await getAdminApiContext();
+    this.createdCategoryIds = [];
+
+    let randomNumber = Math.floor(Math.random() * 1000);
+    for (let i = 0; i < count; i++) {
+      const createPayload = {
+        name: `new${randomNumber}`,
+        parent: {},
+      };
+      const createResponse = await adminContext.post("/api/categories", {
+        data: createPayload,
+      });
+      expect(createResponse.status()).toBe(201);
+      const data = await createResponse.json();
+      this.createdCategoryIds.push(data.id);
+      randomNumber++;
+    }
+  },
+);
+
+When("I get all categories as user 215036R_UserApi", async function () {
+  this.apiResponse = await this.apiContext.get("/api/categories");
+  this.apiResponseBody = await this.apiResponse.json();
+});
+
+When(
+  "I create {int} categories and sub-categories as admin 215036R_UserApi",
+  async function (count) {
+    const adminContext = await getAdminApiContext();
+    this.createdCategoryIds = [];
+
+    let randomNumber = Math.floor(Math.random() * 1000);
+    // Create categories
+    for (let i = 0; i < count; i++) {
+      const createPayload = {
+        name: `n${i}${randomNumber}`,
+        parent: {},
+      };
+      const createResponse = await adminContext.post("/api/categories", {
+        data: createPayload,
+      });
+      expect(createResponse.status()).toBe(201);
+      const data = await createResponse.json();
+      this.createdCategoryIds.push(data.id);
+      randomNumber++;
+    }
+
+    // Create sub-categories
+    for (let i = 0; i < count; i++) {
+      const createPayload = {
+        name: `s${i}${randomNumber}`,
+        parent: { id: this.createdCategoryIds[i] },
+      };
+      const createResponse = await adminContext.post("/api/categories", {
+        data: createPayload,
+      });
+      expect(createResponse.status()).toBe(201);
+      randomNumber++;
+    }
+  },
+);
+
+When("I get category summary as user 215036R_UserApi", async function () {
+  this.apiResponse = await this.apiContext.get("/api/categories/summary");
+  this.apiResponseBody = await this.apiResponse.json();
+});
+
+When(
+  "I create category, sub-category, and {int} plants as admin 215036R_UserApi",
+  async function (count) {
+    const adminContext = await getAdminApiContext();
+    let randomNumber = Math.floor(Math.random() * 1000);
+
+    // Create category
     const createPayload = {
       name: `new${randomNumber}`,
       parent: {},
+      subCategories: [],
     };
-    
-    const createResponse = await adminContext.post('/api/categories', {
-      data: createPayload
+    const createResponse = await adminContext.post("/api/categories", {
+      data: createPayload,
     });
-    
     expect(createResponse.status()).toBe(201);
-    const data = await createResponse.json();
-    createdCategoryIds.push(data.id);
-    randomNumber++;
-  }
-});
+    const createdCategoryData = await createResponse.json();
 
-When("I retrieve all categories via API", async function () {
-  lastResponse = await userContext.get(`/api/categories`);
-  lastResponseData = await lastResponse.json();
-});
-
-Then("the response status should be 200", async function () {
-  expect(lastResponse.status()).toBe(200);
-});
-
-Then("the categories response should have id property", async function () {
-  expect(Array.isArray(lastResponseData)).toBe(true);
-  expect(lastResponseData.length).toBeGreaterThan(0);
-  expect(lastResponseData[0]).toHaveProperty("id");
-});
-
-Then("the categories response should have name property", async function () {
-  expect(lastResponseData[0]).toHaveProperty("name");
-});
-
-Then("the categories response should have parentName property", async function () {
-  expect(lastResponseData[0]).toHaveProperty("parentName");
-});
-
-When("admin deletes all created categories", async function () {
-  for (const id of createdCategoryIds) {
-    const deleteResponse = await adminContext.delete(`/api/categories/${id}`);
-    expect(deleteResponse.status()).toBe(204);
-  }
-  createdCategoryIds = [];
-});
-
-When("admin creates 10 sub-categories under the created categories", async function () {
-  createdSubCategoryIds = [];
-  let randomNumber = Math.floor(Math.random() * 10000);
-  
-  for (let i = 0; i < 10; i++) {
-    const createPayload = {
+    // Create sub-category
+    const createSubcategoryPayload = {
       name: `s${randomNumber}`,
-      parent: { id: createdCategoryIds[i] },
+      parent: { id: createdCategoryData.id },
     };
-    
-    const createResponse = await adminContext.post('/api/categories', {
-      data: createPayload
-    });
-    
-    expect(createResponse.status()).toBe(201);
-    const data = await createResponse.json();
-    createdSubCategoryIds.push(data.id);
-    randomNumber++;
-  }
-});
-
-When("I retrieve category summary via API", async function () {
-  lastResponse = await userContext.get(`/api/categories/summary`);
-  lastResponseData = await lastResponse.json();
-});
-
-Then("the summary response should have mainCategories property", async function () {
-  expect(lastResponseData).toHaveProperty("mainCategories");
-});
-
-Then("the summary response should have subCategories property", async function () {
-  expect(lastResponseData).toHaveProperty("subCategories");
-});
-
-When("admin creates a category and sub-category for plants", async function () {
-  adminContext = await getAdminApiContext(this.baseUrl);
-  createdCategoryIds = [];
-  createdSubCategoryIds = [];
-  
-  let randomNumber = Math.floor(Math.random() * 10000);
-  
-  const createPayload = {
-    name: `new${randomNumber}`,
-    parent: {},
-    subCategories: []
-  };
-  
-  const createResponse = await adminContext.post('/api/categories', {
-    data: createPayload
-  });
-  
-  expect(createResponse.status()).toBe(201);
-  const createdCategoryData = await createResponse.json();
-  createdCategoryIds.push(createdCategoryData.id);
-  
-  // Create sub-category
-  const createSubcategoryPayload = {
-    name: `s${randomNumber}`,
-    parent: { id: createdCategoryData.id },
-  };
-  
-  const createSubcategoryResponse = await adminContext.post('/api/categories', {
-    data: createSubcategoryPayload
-  });
-  
-  expect(createSubcategoryResponse.status()).toBe(201);
-  const createdSubCategoryData = await createSubcategoryResponse.json();
-  createdSubCategoryIds.push(createdSubCategoryData.id);
-  
-  // Store for later use
-  this.mainCategoryId = createdCategoryData.id;
-  this.subCategoryId = createdSubCategoryData.id;
-  this.subCategoryName = createdSubCategoryData.name;
-});
-
-When("admin creates 10 plants under the sub-category", async function () {
-  createdPlantsIds = [];
-  let randomNumber = Math.floor(Math.random() * 10000);
-  
-  for (let i = 0; i < 10; i++) {
-    const createPlantPayload = {
-      name: `p${randomNumber}`,
-      price: 100,
-      quantity: 10,
-      category: {
-        id: this.subCategoryId,
-        name: this.subCategoryName,
-        parent: {
-          id: this.mainCategoryId
-        }
+    const createSubcategoryResponse = await adminContext.post(
+      "/api/categories",
+      {
+        data: createSubcategoryPayload,
       },
+    );
+    expect(createSubcategoryResponse.status()).toBe(201);
+    const createdSubCategoryData = await createSubcategoryResponse.json();
+
+    // Create plants
+    this.createdPlantsIds = [];
+    for (let i = 0; i < count; i++) {
+      const createPlantPayload = {
+        name: `p${randomNumber}`,
+        price: 100,
+        quantity: 10,
+        category: {
+          id: createdSubCategoryData.id,
+          name: createdSubCategoryData.name,
+          parent: {
+            id: createdCategoryData.id,
+          },
+        },
+      };
+      const createPlantResponse = await adminContext.post(
+        `/api/plants/category/${createdSubCategoryData.id}`,
+        {
+          data: createPlantPayload,
+        },
+      );
+      expect(createPlantResponse.status()).toBe(201);
+      const createdPlantData = await createPlantResponse.json();
+      this.createdPlantsIds.push(createdPlantData.id);
+      randomNumber++;
+    }
+  },
+);
+
+When("I get all plants as user 215036R_UserApi", async function () {
+  this.apiResponse = await this.apiContext.get("/api/plants");
+  this.apiResponseBody = await this.apiResponse.json();
+});
+
+When(
+  "I create category, sub-category, and plants with varying stock as admin 215036R_UserApi",
+  async function () {
+    const adminContext = await getAdminApiContext();
+    let randomNumber = Math.floor(Math.random() * 1000);
+
+    // Create category
+    const createPayload = {
+      name: `new${randomNumber}`,
+      parent: {},
+      subCategories: [],
     };
-    
-    const createPlantResponse = await adminContext.post(`/api/plants/category/${this.subCategoryId}`, {
-      data: createPlantPayload
+    const createResponse = await adminContext.post("/api/categories", {
+      data: createPayload,
     });
-    
-    expect(createPlantResponse.status()).toBe(201);
-    const createdPlantData = await createPlantResponse.json();
-    createdPlantsIds.push(createdPlantData.id);
-    randomNumber++;
+    expect(createResponse.status()).toBe(201);
+    const createdCategoryData = await createResponse.json();
+
+    // Create sub-category
+    const createSubcategoryPayload = {
+      name: `s${randomNumber}`,
+      parent: { id: createdCategoryData.id },
+    };
+    const createSubcategoryResponse = await adminContext.post(
+      "/api/categories",
+      {
+        data: createSubcategoryPayload,
+      },
+    );
+    expect(createSubcategoryResponse.status()).toBe(201);
+    const createdSubCategoryData = await createSubcategoryResponse.json();
+
+    // Create plants with varying stock
+    this.createdPlantsIds = [];
+    for (let i = 0; i < 10; i++) {
+      const createPlantPayload = {
+        name: `p${randomNumber}`,
+        price: 100,
+        quantity: 10 - i, // Varying stock
+        category: {
+          id: createdSubCategoryData.id,
+          name: createdSubCategoryData.name,
+          parent: {
+            id: createdCategoryData.id,
+          },
+        },
+      };
+      const createPlantResponse = await adminContext.post(
+        `/api/plants/category/${createdSubCategoryData.id}`,
+        {
+          data: createPlantPayload,
+        },
+      );
+      expect(createPlantResponse.status()).toBe(201);
+      const createdPlantData = await createPlantResponse.json();
+      this.createdPlantsIds.push(createdPlantData.id);
+      randomNumber++;
+    }
+  },
+);
+
+When("I get plants summary as user 215036R_UserApi", async function () {
+  this.apiResponse = await this.apiContext.get("/api/plants/summary");
+  this.apiResponseBody = await this.apiResponse.json();
+});
+
+When(
+  "I create category, sub-category, plants, and {int} sales as admin 215036R_UserApi",
+  async function (count) {
+    const adminContext = await getAdminApiContext();
+    let randomNumber = Math.floor(Math.random() * 1000);
+
+    // Create category
+    const createPayload = {
+      name: `new${randomNumber}`,
+      parent: {},
+      subCategories: [],
+    };
+    const createResponse = await adminContext.post("/api/categories", {
+      data: createPayload,
+    });
+    expect(createResponse.status()).toBe(201);
+    const createdCategoryData = await createResponse.json();
+
+    // Create sub-category
+    const createSubcategoryPayload = {
+      name: `s${randomNumber}`,
+      parent: { id: createdCategoryData.id },
+    };
+    const createSubcategoryResponse = await adminContext.post(
+      "/api/categories",
+      {
+        data: createSubcategoryPayload,
+      },
+    );
+    expect(createSubcategoryResponse.status()).toBe(201);
+    const createdSubCategoryData = await createSubcategoryResponse.json();
+
+    // Create plants
+    this.createdPlantsIds = [];
+    for (let i = 0; i < count; i++) {
+      const createPlantPayload = {
+        name: `p${randomNumber}`,
+        price: 100,
+        quantity: 10,
+        category: {
+          id: createdSubCategoryData.id,
+          name: createdSubCategoryData.name,
+          parent: {
+            id: createdCategoryData.id,
+          },
+        },
+      };
+      const createPlantResponse = await adminContext.post(
+        `/api/plants/category/${createdSubCategoryData.id}`,
+        {
+          data: createPlantPayload,
+        },
+      );
+      expect(createPlantResponse.status()).toBe(201);
+      const createdPlantData = await createPlantResponse.json();
+      this.createdPlantsIds.push(createdPlantData.id);
+      randomNumber++;
+    }
+
+    // Create sales
+    this.createdSalesIds = [];
+    for (let i = 0; i < count; i++) {
+      const createSalesResponse = await adminContext.post(
+        `/api/sales/plant/${this.createdPlantsIds[i]}?quantity=1`,
+      );
+      expect(createSalesResponse.status()).toBe(201);
+      const createdSalesData = await createSalesResponse.json();
+      this.createdSalesIds.push(createdSalesData.id);
+    }
+  },
+);
+
+When("I get all sales as user 215036R_UserApi", async function () {
+  this.apiResponse = await this.apiContext.get("/api/sales");
+  this.apiResponseBody = await this.apiResponse.json();
+});
+
+When(
+  "I try to get categories without token 215036R_UserApi",
+  async function () {
+    const context = await request.newContext({
+      baseURL: BASE_URL,
+    });
+    this.apiResponse = await context.get("/api/categories");
+    this.apiResponseBody = await this.apiResponse.json();
+  },
+);
+
+When(
+  "I try to get plants with invalid token 215036R_UserApi",
+  async function () {
+    const context = await request.newContext({
+      baseURL: BASE_URL,
+      extraHTTPHeaders: {
+        Authorization: "Bearer THIS_IS_A_FAKE_TOKEN_12345",
+      },
+    });
+    this.apiResponse = await context.get("/api/plants");
+    this.apiResponseBody = await this.apiResponse.json();
+  },
+);
+
+// ---------- THEN ----------
+
+Then(
+  "the response status should be {int} 215036R_UserApi",
+  async function (statusCode) {
+    expect(this.apiResponse.status()).toBe(statusCode);
+  },
+);
+
+Then(
+  "the response status should be {int} or {int} 215036R_UserApi",
+  async function (statusCode1, statusCode2) {
+    expect([statusCode1, statusCode2]).toContain(this.apiResponse.status());
+  },
+);
+
+Then(
+  "the response should have valid category list properties 215036R_UserApi",
+  async function () {
+    expect(this.apiResponseBody[0]).toHaveProperty("id");
+    expect(this.apiResponseBody[0]).toHaveProperty("name");
+    expect(this.apiResponseBody[0]).toHaveProperty("parentName");
+  },
+);
+
+Then(
+  "the response should have category summary properties 215036R_UserApi",
+  async function () {
+    expect(this.apiResponseBody).toHaveProperty("mainCategories");
+    expect(this.apiResponseBody).toHaveProperty("subCategories");
+  },
+);
+
+Then(
+  "the response should be a valid plants array 215036R_UserApi",
+  async function () {
+    expect(Array.isArray(this.apiResponseBody)).toBe(true);
+    expect(this.apiResponseBody.length).toBeGreaterThan(0);
+  },
+);
+
+Then(
+  "the response should have plants summary properties 215036R_UserApi",
+  async function () {
+    expect(this.apiResponseBody).toHaveProperty("totalPlants");
+    expect(this.apiResponseBody).toHaveProperty("lowStockPlants");
+  },
+);
+
+Then(
+  "the response should be a valid sales array 215036R_UserApi",
+  async function () {
+    expect(Array.isArray(this.apiResponseBody)).toBe(true);
+    expect(this.apiResponseBody.length).toBeGreaterThan(0);
+  },
+);
+
+Then(
+  "the response should contain an error message 215036R_UserApi",
+  async function () {
+    expect(
+      this.apiResponseBody.message || this.apiResponseBody.error,
+    ).toBeDefined();
+  },
+);
+
+Then(
+  "I delete all created categories as admin 215036R_UserApi",
+  async function () {
+    if (!this.createdCategoryIds || this.createdCategoryIds.length === 0) {
+      return;
+    }
+
+    const adminContext = await getAdminApiContext();
+    for (const id of this.createdCategoryIds) {
+      const deleteResponse = await adminContext.delete(`/api/categories/${id}`);
+      expect(deleteResponse.status()).toBe(204);
+    }
+  },
+);
+
+Then("I delete all created plants as admin 215036R_UserApi", async function () {
+  if (!this.createdPlantsIds || this.createdPlantsIds.length === 0) {
+    return;
   }
-});
 
-When("I retrieve all plants via API", async function () {
-  lastResponse = await userContext.get(`/api/plants`);
-  lastResponseData = await lastResponse.json();
-});
-
-Then("the plants response should be an array", async function () {
-  expect(Array.isArray(lastResponseData)).toBe(true);
-});
-
-Then("the plants response should have items greater than 0", async function () {
-  expect(lastResponseData.length).toBeGreaterThan(0);
-});
-
-When("admin deletes all created plants", async function () {
-  for (const plant of createdPlantsIds) {
+  const adminContext = await getAdminApiContext();
+  for (const plant of this.createdPlantsIds) {
     const deleteResponse = await adminContext.delete(`/api/plants/${plant}`);
     expect(deleteResponse.status()).toBe(204);
   }
-  createdPlantsIds = [];
 });
 
-When("admin deletes created sub-categories and main categories", async function () {
-  if (!adminContext) {
-    adminContext = await getAdminApiContext(this.baseUrl);
+Then("I delete all created sales as admin 215036R_UserApi", async function () {
+  if (!this.createdSalesIds || this.createdSalesIds.length === 0) {
+    return;
   }
 
-  // Delete sub-categories first
-  if (Array.isArray(createdSubCategoryIds) && createdSubCategoryIds.length > 0) {
-    for (const id of createdSubCategoryIds) {
-      const deleteResponse = await adminContext.delete(`/api/categories/${id}`);
-      expect([204,200]).toContain(deleteResponse.status());
-    }
-    createdSubCategoryIds = [];
-  }
-
-  // Delete main categories
-  if (Array.isArray(createdCategoryIds) && createdCategoryIds.length > 0) {
-    for (const id of createdCategoryIds) {
-      const deleteResponse = await adminContext.delete(`/api/categories/${id}`);
-      expect([204,200]).toContain(deleteResponse.status());
-    }
-    createdCategoryIds = [];
-  }
-});
-
-When("admin creates 10 plants with varying quantities", async function () {
-  createdPlantsIds = [];
-  let randomNumber = Math.floor(Math.random() * 10000);
-  
-  for (let i = 0; i < 10; i++) {
-    const createPlantPayload = {
-      name: `p${randomNumber}`,
-      price: 100,
-      quantity: 10 - i,
-      category: {
-        id: this.subCategoryId,
-        name: this.subCategoryName,
-        parent: {
-          id: this.mainCategoryId
-        }
-      },
-    };
-    
-    const createPlantResponse = await adminContext.post(`/api/plants/category/${this.subCategoryId}`, {
-      data: createPlantPayload
-    });
-    
-    expect(createPlantResponse.status()).toBe(201);
-    const createdPlantData = await createPlantResponse.json();
-    createdPlantsIds.push(createdPlantData.id);
-    randomNumber++;
-  }
-});
-
-When("I retrieve plants summary via API", async function () {
-  lastResponse = await userContext.get(`/api/plants/summary`);
-  lastResponseData = await lastResponse.json();
-});
-
-Then("the plants summary should have totalPlants property", async function () {
-  expect(lastResponseData).toHaveProperty("totalPlants");
-});
-
-Then("the plants summary should have lowStockPlants property", async function () {
-  expect(lastResponseData).toHaveProperty("lowStockPlants");
-});
-
-When("admin creates 10 sales records from the plants", async function () {
-  createdSalesIds = [];
-  
-  for (let i = 0; i < 10; i++) {
-    const createSalesResponse = await adminContext.post(`/api/sales/plant/${createdPlantsIds[i]}?quantity=1`);
-    expect(createSalesResponse.status()).toBe(201);
-    const createdSalesData = await createSalesResponse.json();
-    createdSalesIds.push(createdSalesData.id);
-  }
-});
-
-When("I retrieve all sales via API", async function () {
-  lastResponse = await userContext.get(`/api/sales`);
-  lastResponseData = await lastResponse.json();
-});
-
-Then("the sales response should be an array", async function () {
-  expect(Array.isArray(lastResponseData)).toBe(true);
-});
-
-Then("the sales response should have items greater than 0", async function () {
-  expect(lastResponseData.length).toBeGreaterThan(0);
-});
-
-When("admin deletes all created sales and plants", async function () {
-  for (const sale of createdSalesIds) {
+  const adminContext = await getAdminApiContext();
+  for (const sale of this.createdSalesIds) {
     const deleteResponse = await adminContext.delete(`/api/sales/${sale}`);
     expect(deleteResponse.status()).toBe(204);
   }
-  createdSalesIds = [];
-  
-  for (const plant of createdPlantsIds) {
-    const deleteResponse = await adminContext.delete(`/api/plants/${plant}`);
-    expect(deleteResponse.status()).toBe(204);
-  }
-  createdPlantsIds = [];
-});
-
-When("I try to access categories API without token", async function () {
-  const context = await request.newContext({
-    baseURL: this.baseUrl
-    // No headers = no token
-  });
-  
-  lastResponse = await context.get("/api/categories");
-  lastResponseData = await lastResponse.json();
-});
-
-Then("the response status should be 401 or 403", async function () {
-  expect([401, 403]).toContain(lastResponse.status());
-});
-
-Then("the response should contain an error message", async function () {
-  expect(lastResponseData.message || lastResponseData.error).toBeDefined();
-});
-
-When("I try to access plants API with an invalid token", async function () {
-  const context = await request.newContext({
-    baseURL: this.baseUrl,
-    extraHTTPHeaders: {
-      Authorization: "Bearer THIS_IS_A_FAKE_TOKEN_12345"
-    }
-  });
-  
-  lastResponse = await context.get("/api/plants");
-  lastResponseData = await lastResponse.json();
-});
-
-Then("the response status should be 401", async function () {
-  expect(lastResponse.status()).toBe(401);
-});
-
-// Helper function to get user API context with token
-async function getUserApiContext(baseUrl) {
-  const loginResponse = await request.post(`${baseUrl}/api/auth/login`, {
-    data: {
-      email: userAuth.email,
-      password: userAuth.password
-    }
-  });
-  
-  const loginData = await loginResponse.json();
-  const token = loginData.token || loginData.accessToken;
-  
-  return await request.newContext({
-    baseURL: baseUrl,
-    extraHTTPHeaders: {
-      Authorization: `Bearer ${token}`
-    }
-  });
-}
-
-// Helper function to get admin API context with token
-async function getAdminApiContext(baseUrl) {
-  const loginResponse = await request.post(`${baseUrl}/api/auth/login`, {
-    data: {
-      email: adminAuth.email,
-      password: adminAuth.password
-    }
-  });
-  
-  const loginData = await loginResponse.json();
-  const token = loginData.token || loginData.accessToken;
-  
-  return await request.newContext({
-    baseURL: baseUrl,
-    extraHTTPHeaders: {
-      Authorization: `Bearer ${token}`
-    }
-  });
-}
-
-// Cleanup after each scenario
-After(async function () {
-  // Clean up any remaining created data
-  if (adminContext) {
-    for (const id of createdCategoryIds) {
-      await adminContext.delete(`/api/categories/${id}`).catch(() => {});
-    }
-    for (const id of createdPlantsIds) {
-      await adminContext.delete(`/api/plants/${id}`).catch(() => {});
-    }
-    for (const id of createdSalesIds) {
-      await adminContext.delete(`/api/sales/${id}`).catch(() => {});
-    }
-  }
-  
-  createdCategoryIds = [];
-  createdSubCategoryIds = [];
-  createdPlantsIds = [];
-  createdSalesIds = [];
-  userContext = null;
-  adminContext = null;
 });

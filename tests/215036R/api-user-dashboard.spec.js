@@ -36,7 +36,7 @@ const createCategory = async () => {
     // Create 10 categories
     for(let i = 0; i < 10; i++) {
         const createPayload = {
-            name: `new${randomNumber}`,
+            name: `n${i}${randomNumber}`,
             parent: {},
         };
         const createResponse = await adminContext.post('/api/categories', {
@@ -60,7 +60,7 @@ const createSubCategory = async (createdCategoryIds) => {
     // Create 10 sub-categories
     for(let i = 0; i < 10; i++) {
         const createPayload = {
-            name: `s${randomNumber}`,
+            name: `s${i}${randomNumber}`,
             parent: {id: categoryIds[i]},
         };
         const createResponse = await adminContext.post('/api/categories', {
@@ -108,7 +108,7 @@ test("Get all plants", async () => {
     const adminContext = await getAdminApiContext();
     let randomNumber = Math.floor(Math.random() * 1000);
     const createPayload = {
-        name: `new${randomNumber}`,
+        name: `n${randomNumber}`,
         parent: {},
         subCategories: []
     };
@@ -256,86 +256,90 @@ test("Get plants summary", async() => {
 
 test("Get all sales", async () => {
 
-    // Create a category
+    // Create a category for sale items
     const adminContext = await getAdminApiContext();
     let randomNumber = Math.floor(Math.random() * 1000);
-    const createPayload = {
-        name: `new${randomNumber}`,
+
+    const categoryPayload = {
+        name: `saleCat${randomNumber}`,
         parent: {},
         subCategories: []
     };
-    const createResponse = await adminContext.post('/api/categories', {
-        data: createPayload
-    });
-    const createdCategoryData = await createResponse.json();
-    expect(createResponse.status()).toBe(201);
 
-    // Create a sub-category
-    const createSubcategoryPayload = {
-        name: `s${randomNumber}`,
-        parent: {id: createdCategoryData.id},
+    const categoryResponse = await adminContext.post('/api/categories', {
+        data: categoryPayload
+    });
+    expect(categoryResponse.status()).toBe(201);
+    const mainCategory = await categoryResponse.json();
+
+    // Create a sub-category for sale items
+    const subCategoryPayload = {
+        name: `saleSub${randomNumber}`,
+        parent: { id: mainCategory.id },
     };
-    const createSubcategoryResponse = await adminContext.post('/api/categories', {
-        data: createSubcategoryPayload
-    });
-    expect(createSubcategoryResponse.status()).toBe(201);
-    const createdSubCategoryData = await createSubcategoryResponse.json();
-    const createdPlantsIds = [];
 
-    // Create plants
-    for(let i = 0; i < 10; i++) {
-        const createPlantPayload = {
-            name: `p${randomNumber}`,
+    const subCategoryResponse = await adminContext.post('/api/categories', {
+        data: subCategoryPayload
+    });
+    expect(subCategoryResponse.status()).toBe(201);
+    const subCategory = await subCategoryResponse.json();
+
+    // Store item IDs used for sales
+    const saleItemIds = [];
+
+    // Create items to be sold
+    for (let i = 0; i < 10; i++) {
+        const itemPayload = {
+            name: `item${randomNumber}`,
             price: 100,
             quantity: 10,
             category: {
-                id: createdSubCategoryData.id,
-                name: createdSubCategoryData.name,
+                id: subCategory.id,
+                name: subCategory.name,
                 parent: {
-                    id: createdCategoryData.id
+                    id: mainCategory.id
                 }
             },
-        }
-        const createPlantResponse = await adminContext.post(`/api/plants/category/${createdSubCategoryData.id}`, {
-            data: createPlantPayload
-        });
-        expect(createPlantResponse.status()).toBe(201);
-        const createdPlantData = await createPlantResponse.json();
-        createdPlantsIds.push(createdPlantData.id);
+        };
+
+        const itemResponse = await adminContext.post(
+            `/api/plants/category/${subCategory.id}`,
+            { data: itemPayload }
+        );
+        expect(itemResponse.status()).toBe(201);
+
+        const createdItem = await itemResponse.json();
+        saleItemIds.push(createdItem.id);
         randomNumber++;
     }
 
-    // Create sales
+    // Create sales transactions
     const createdSalesIds = [];
-    for(let i = 0; i < 10; i++) {
-        const createSalesResponse = await adminContext.post(`/api/sales/plant/${createdPlantsIds[i]}?quantity=1`);
-        expect(createSalesResponse.status()).toBe(201);
-        const createdSalesData = await createSalesResponse.json();
-        createdSalesIds.push(createdSalesData.id);
+    for (let i = 0; i < 10; i++) {
+        const salesResponse = await adminContext.post(
+            `/api/sales/plant/${saleItemIds[i]}?quantity=1`
+        );
+        expect(salesResponse.status()).toBe(201);
+
+        const saleData = await salesResponse.json();
+        createdSalesIds.push(saleData.id);
     }
 
+    // Retrieve all sales as a normal user
     const context = await getUserApiContext();
     const response = await context.get(`/api/sales`);
     expect(response.status()).toBe(200);
     const data = await response.json();
 
-    // Structure validation
+    // Validate sales response structure
     expect(Array.isArray(data)).toBe(true);
     expect(data.length).toBeGreaterThan(0);
 
-    // Delete the created sales
-    for(const sale of createdSalesIds) {
-        const deleteResponse = await adminContext.delete(`/api/sales/${sale}`);
+    // Clean up created sales
+    for (const saleId of createdSalesIds) {
+        const deleteResponse = await adminContext.delete(`/api/sales/${saleId}`);
         expect(deleteResponse.status()).toBe(204);
     }
-
-    // Delete the created sub-category
-    // const deleteSubcategoryResponse = await adminContext.delete(`/api/categories/${createdSubCategoryData.id}`);
-    // expect(deleteSubcategoryResponse.status()).toBe(204);
-
-    // Delete the created main category
-    // const deleteMainCategoryResponse = await adminContext.delete(`/api/categories/${createdCategoryData.id}`);
-    // expect(deleteMainCategoryResponse.status()).toBe(204);
 });
 
 test("Prevent access without token", async ({ baseURL }) => {

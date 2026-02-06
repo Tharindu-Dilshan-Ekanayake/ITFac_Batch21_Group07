@@ -1,71 +1,48 @@
-Feature: User Dashboard API
+Feature: API User Dashboard
 
-  @api @user @dashboard
-  Scenario: API_USER_DASHBOARD-01: Get all categories
-    Given I am a user with valid API token
-    When admin creates 10 categories
-    And I retrieve all categories via API
-    Then the response status should be 200
-    And the categories response should have id property
-    And the categories response should have name property
-    And the categories response should have parentName property
-    When admin deletes all created categories
+    Background:
+        Given I have a valid user token 215036R_UserApi
 
-  @api @user @dashboard
-  Scenario: API_USER_DASHBOARD-02: Get category summary
-    Given I am a user with valid API token
-    When admin creates 10 categories
-    And admin creates 10 sub-categories under the created categories
-    And I retrieve category summary via API
-    Then the response status should be 200
-    And the summary response should have mainCategories property
-    And the summary response should have subCategories property
-    When admin deletes created sub-categories and main categories
+    Scenario: API_USER_Dashboard-01: Get all categories
+        When I create 10 categories as admin 215036R_UserApi
+        And I get all categories as user 215036R_UserApi
+        Then the response status should be 200 215036R_UserApi
+        And the response should have valid category list properties 215036R_UserApi
+        And I delete all created categories as admin 215036R_UserApi
 
-  @api @user @dashboard
-  Scenario: API_USER_DASHBOARD-03: Get all plants
-    Given I am a user with valid API token
-    When admin creates a category and sub-category for plants
-    And admin creates 10 plants under the sub-category
-    And I retrieve all plants via API
-    Then the response status should be 200
-    And the plants response should be an array
-    And the plants response should have items greater than 0
-    When admin deletes all created plants
-    When admin deletes created sub-categories and main categories
+    Scenario: API_USER_Dashboard-02: Get category summary
+        When I create 10 categories and sub-categories as admin 215036R_UserApi
+        And I get category summary as user 215036R_UserApi
+        Then the response status should be 200 215036R_UserApi
+        And the response should have category summary properties 215036R_UserApi
 
-  @api @user @dashboard
-  Scenario: API_USER_DASHBOARD-04: Get plants summary
-    Given I am a user with valid API token
-    When admin creates a category and sub-category for plants
-    And admin creates 10 plants with varying quantities
-    And I retrieve plants summary via API
-    Then the response status should be 200
-    And the plants summary should have totalPlants property
-    And the plants summary should have lowStockPlants property
-    When admin deletes all created plants
-    When admin deletes created sub-categories and main categories
+    Scenario: API_USER_Dashboard-03: Get all plants
+        When I create category, sub-category, and 10 plants as admin 215036R_UserApi
+        And I get all plants as user 215036R_UserApi
+        Then the response status should be 200 215036R_UserApi
+        And the response should be a valid plants array 215036R_UserApi
+        And I delete all created plants as admin 215036R_UserApi
 
-  @api @user @dashboard
-  Scenario: API_USER_DASHBOARD-05: Get all sales
-    Given I am a user with valid API token
-    When admin creates a category and sub-category for sales
-    And admin creates 10 plants under the sub-category
-    And admin creates 10 sales records from the plants
-    And I retrieve all sales via API
-    Then the response status should be 200
-    And the sales response should be an array
-    And the sales response should have items greater than 0
-    When admin deletes all created sales and plants
+    Scenario: API_USER_Dashboard-04: Get plants summary
+        When I create category, sub-category, and plants with varying stock as admin 215036R_UserApi
+        And I get plants summary as user 215036R_UserApi
+        Then the response status should be 200 215036R_UserApi
+        And the response should have plants summary properties 215036R_UserApi
+        And I delete all created plants as admin 215036R_UserApi
 
-  @api @user @dashboard
-  Scenario: API_USER_DASHBOARD-06: Prevent access without token
-    When I try to access categories API without token
-    Then the response status should be 401 or 403
-    And the response should contain an error message
+    Scenario: API_USER_Dashboard-05: Get all sales
+        When I create category, sub-category, plants, and 10 sales as admin 215036R_UserApi
+        And I get all sales as user 215036R_UserApi
+        Then the response status should be 200 215036R_UserApi
+        And the response should be a valid sales array 215036R_UserApi
+        And I delete all created sales as admin 215036R_UserApi
 
-  @api @user @dashboard
-  Scenario: API_USER_DASHBOARD-07: Prevent access with invalid token
-    When I try to access plants API with an invalid token
-    Then the response status should be 401
-    And the response should contain an error message
+    Scenario: API_USER_Dashboard-06: Prevent access without token
+        When I try to get categories without token 215036R_UserApi
+        Then the response status should be 401 or 403 215036R_UserApi
+        And the response should contain an error message 215036R_UserApi
+
+    Scenario: API_USER_Dashboard-07: Prevent access with invalid token
+        When I try to get plants with invalid token 215036R_UserApi
+        Then the response status should be 401 215036R_UserApi
+        And the response should contain an error message 215036R_UserApi
