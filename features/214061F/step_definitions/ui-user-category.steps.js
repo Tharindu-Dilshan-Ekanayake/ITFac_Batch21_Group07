@@ -1,6 +1,6 @@
-const { Given, When, Then, After } = require("@cucumber/cucumber");
-const dotenv = require("dotenv");
-const { expect, request } = require("@playwright/test");
+import { Given, When, Then, After } from "@cucumber/cucumber";
+import dotenv from "dotenv";
+import { expect, request } from "@playwright/test";
 
 dotenv.config();
 

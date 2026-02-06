@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 import { getUserApiContext } from '../../../utils/api-user.js';
 import { getAdminApiContext } from '../../../utils/api-admin.js';
 
