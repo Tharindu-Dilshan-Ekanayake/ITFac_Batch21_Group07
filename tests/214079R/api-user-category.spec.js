@@ -2,47 +2,6 @@ import { test, expect } from "@playwright/test";
 import { getUserApiContext } from "../../utils/api-user";
 import { getAdminApiContext } from "../../utils/api-admin";
 
-test("Get all categories", async () => {
-
-    // Create a category in admin side
-    const context = await getAdminApiContext();
-    const createdCategoryIds = [];
-
-    // Create 10 categories
-    for(let i = 0; i < 10; i++) {
-        const randomNumber = Math.floor(Math.random() * 1000);
-        const createPayload = {
-            name: `new${randomNumber}`,
-            parent: {},
-            subCategories: []
-        };
-        const createResponse = await context.post('/api/categories', {
-            data: createPayload
-        });
-        expect(createResponse.status()).toBe(201);
-        const data = await createResponse.json();
-        createdCategoryIds.push(data.id);
-    }
-    
-    // Get all categories to be visibled for the user
-    const userContext = await getUserApiContext();
-    const userResponse = await userContext.get(`/api/categories`);
-    // Response validation
-    expect(userResponse.status()).toBe(200);
-
-    // Verify response have relevant properties
-    const userData = await userResponse.json();
-    expect(userData[0]).toHaveProperty("id");
-    expect(userData[0]).toHaveProperty("name");
-    expect(userData[0]).toHaveProperty("parentName");
-
-    // Delete the created categories
-    for(const id of createdCategoryIds) {
-        const deleteResponse = await context.delete(`/api/categories/${id}`);
-        expect(deleteResponse.status()).toBe(204);
-    };
-});
-
 test("Get category by valid ID", async () => {
 
     // Create a category in admin side

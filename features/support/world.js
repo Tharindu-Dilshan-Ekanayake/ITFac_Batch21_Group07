@@ -1,6 +1,11 @@
-const { setWorldConstructor, Before, After, setDefaultTimeout } = require("@cucumber/cucumber");
-const { chromium } = require("playwright");
-const dotenv = require("dotenv");
+import {
+  setWorldConstructor,
+  Before,
+  After,
+  setDefaultTimeout,
+} from "@cucumber/cucumber";
+import { chromium } from "playwright";
+import dotenv from "dotenv";
 
 dotenv.config();
 
