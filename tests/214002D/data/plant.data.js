@@ -3,9 +3,6 @@ export const quantityLow = "2";
 export const quantityNormal = "10";
 export const check_PlantID = "1001";
 
-
-
-
 export const generatePlantNames = () => {
   const timestamp = Date.now();
   const uniqueId = Math.floor(Math.random() * 1000);

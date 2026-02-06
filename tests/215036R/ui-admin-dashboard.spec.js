@@ -15,6 +15,18 @@ test("Verify dashboard content and active tab highlight", async ({ page, baseURL
   const plantsCard = page.locator('h6:has-text("Plants")');
   const salesCard = page.locator('h6:has-text("Sales")');
 
+  // Locators for the sidebar navigation
+  const categoriesSidebarNavigation = page.locator('a.nav-link[href="/ui/categories"]:has-text("Categories")');
+  const plantsSidebarNavigation = page.locator('a.nav-link[href="/ui/plants"]:has-text("Plants")');
+  const salesSidebarNavigation = page.locator('a.nav-link[href="/ui/sales"]:has-text("Sales")');
+  const logoutButton = page.locator('a.nav-link[href="/ui/logout"]:has-text("Logout")');
+
+  // Check if the sidebar navigation is visible
+  await expect(categoriesSidebarNavigation).toBeVisible();
+  await expect(plantsSidebarNavigation).toBeVisible();
+  await expect(salesSidebarNavigation).toBeVisible();
+  await expect(logoutButton).toBeVisible();
+
   // Check if the Dashboard tab, logo are visible and dashboard tab has the 'active' class
   await expect(logo).toBeVisible();
   await expect(dashboardTab).toBeVisible();
@@ -32,10 +44,7 @@ test("Verify visibility of summery data", async ({ page, baseURL }) => {
   const cards = ["Categories", "Plants", "Sales"];
 
   for (const name of cards) {
-    const card = page
-      .locator(`h6:has-text("${name}")`)
-      .locator("..")
-      .locator("..");
+    const card = page.locator(`h6:has-text("${name}")`).locator("..").locator("..");
 
     // Locator for getting numbers
     const numbers = card.locator("div.fw-bold");

@@ -1,7 +1,6 @@
 import test, { expect } from "@playwright/test";
 
 test("Verify dashboard content and active tab highlight", async ({ page, baseURL }) => {
-  // Go to dashboard page
   await page.goto(`${baseURL}/ui/dashboard`);
 
   // Verify header is visible
@@ -15,6 +14,18 @@ test("Verify dashboard content and active tab highlight", async ({ page, baseURL
   const categoriesCard = page.locator('h6:has-text("Categories")');
   const plantsCard = page.locator('h6:has-text("Plants")');
   const salesCard = page.locator('h6:has-text("Sales")');
+
+  // Locators for the sidebar navigation
+  const categoriesSidebarNavigation = page.locator('a.nav-link[href="/ui/categories"]:has-text("Categories")');
+  const plantsSidebarNavigation = page.locator('a.nav-link[href="/ui/plants"]:has-text("Plants")');
+  const salesSidebarNavigation = page.locator('a.nav-link[href="/ui/sales"]:has-text("Sales")');
+  const logoutButton = page.locator('a.nav-link[href="/ui/logout"]:has-text("Logout")');
+
+  // Check if the sidebar navigation is visible
+  await expect(categoriesSidebarNavigation).toBeVisible();
+  await expect(plantsSidebarNavigation).toBeVisible();
+  await expect(salesSidebarNavigation).toBeVisible();
+  await expect(logoutButton).toBeVisible();
 
   // Check if the Dashboard tab, logo are visible and dashboard tab has the 'active' class
   await expect(logo).toBeVisible();
@@ -34,10 +45,7 @@ test("Verify visibility of summery data", async ({ page, baseURL }) => {
   const cards = ["Categories", "Plants", "Sales"];
 
   for (const name of cards) {
-    const card = page
-      .locator(`h6:has-text("${name}")`)
-      .locator("..")
-      .locator("..");
+    const card = page.locator(`h6:has-text("${name}")`).locator("..").locator("..");
 
     // Locator for getting numbers
     const numbers = card.locator("div.fw-bold");
@@ -64,7 +72,7 @@ test("Navigation via Manage Categories button", async ({ page, baseURL }) => {
   // Waits for loading the page
   await expect(page).toHaveURL(/\/ui\/categories/);
 
-  // Ensure admin is on the categories page
+  // Ensure user is on the categories page
   const categoriesHeading = page.locator('h3:has-text("Categories")');
   await expect(categoriesHeading).toBeVisible();
 });
@@ -79,7 +87,7 @@ test("Navigation via Manage Plants button", async ({ page, baseURL }) => {
   // Waits for loading the page
   await expect(page).toHaveURL(/\/ui\/plants/);
 
-  // Ensure admin is on the categories page
+  // Ensure user is on the plants page
   const plantsHeading = page.locator('h3:has-text("Plants")');
   await expect(plantsHeading).toBeVisible();
 });
@@ -94,7 +102,7 @@ test("Navigation via View Sales button", async ({ page, baseURL }) => {
   // Waits for loading the page
   await expect(page).toHaveURL(/\/ui\/sales/);
 
-  // Ensure admin is on the categories page
+  // Ensure user is on the sales page
   const salesHeading = page.locator('h3:has-text("Sales")');
   await expect(salesHeading).toBeVisible();
 });
