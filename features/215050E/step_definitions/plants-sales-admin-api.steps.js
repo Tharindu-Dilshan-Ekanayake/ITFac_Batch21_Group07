@@ -1,6 +1,6 @@
-const { Given, When, Then, After } = require("@cucumber/cucumber");
-const { expect, request } = require("@playwright/test");
-const dotenv = require("dotenv");
+import { Given, When, Then, After } from "@cucumber/cucumber";
+import { expect, request } from "@playwright/test";
+import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -232,13 +232,6 @@ When("I delete the sale via API", async function () {
 });
 
 /* ---------- THEN ---------- */
-
-Then("the API response status should be {int}", async function (status) {
-  expect(
-    this.apiResponse.status(),
-    await this.apiResponse.text()
-  ).toBe(status);
-});
 
 Then('the response status should be {int}', async function (status) {
   expect(this.apiResponse.status(), await this.apiResponse.text()).toBe(status);

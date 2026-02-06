@@ -1,6 +1,6 @@
-const { Given, When, Then } = require('@cucumber/cucumber');
-const { expect, request } = require('@playwright/test');
-const dotenv = require('dotenv');
+import { Given, When, Then } from "@cucumber/cucumber";
+import { expect, request } from "@playwright/test";
+import dotenv from "dotenv";
 dotenv.config();
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
