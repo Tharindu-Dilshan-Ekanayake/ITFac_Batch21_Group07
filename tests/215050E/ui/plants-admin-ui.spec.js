@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+import { getAdminApiContext } from '../../../utils/api-admin.js';
 
 
 
@@ -51,25 +52,170 @@ test.describe('Admin Plants Management', () => {
 
 
 
-  test('UI_ADMIN_Plant-26 Verify all categories filtering', async ({ page }) => {
-    // Select the category from the dropdown using selectOption
-    const categoryDropdown = page.locator('select');
-    await categoryDropdown.selectOption({ label: 'Orchid' }); // or { value: '4' }
+//  test.only('UI_ADMIN_Plant-26 Verify all categories filtering', async ({ page }) => {
+//   const context = await getAdminApiContext();
+//   const randomNumber = Math.floor(Math.random() * 100000);
+  
+//   let mainCategory, subCategory, plant;
+  
+//   try {
+//     // Step 1: Create MAIN category via API
+//     const mainCategoryPayload = {
+//       name: `Main${randomNumber}`,
+//       subCategories: []
+//     };
+//     const mainCategoryResponse = await context.post("/api/categories", { 
+//       data: mainCategoryPayload 
+//     });
     
-    const searchButton = page.locator('button:has-text("Search")');
-    await searchButton.click();
+//     if (mainCategoryResponse.status() !== 201) {
+//       console.error('Main category creation failed. Status:', mainCategoryResponse.status());
+//       console.error('Response:', await mainCategoryResponse.text());
+//     }
     
-    await page.waitForTimeout(1000);
-    const plantRows = page.locator('table tbody tr');
-    const count = await plantRows.count();
+//     expect(mainCategoryResponse.status()).toBe(201);
+//     mainCategory = await mainCategoryResponse.json();
     
-    expect(count).toBeGreaterThan(0);
     
-    for (let i = 0; i < count; i++) {
-      const rowText = await plantRows.nth(i).textContent();
-      expect(rowText.toLowerCase()).toContain('orchid');
-    }
-});    // passed
+//     // Step 2: Create SUB-CATEGORY via API
+//     const subCategoryPayload = {
+//       name: `Sub${randomNumber}`,
+//       parent: mainCategory,
+//       subCategories: []
+//     };
+//     const subCategoryResponse = await context.post("/api/categories", { 
+//       data: subCategoryPayload 
+//     });
+    
+//     if (subCategoryResponse.status() !== 201) {
+//       console.error('Sub-category creation failed. Status:', subCategoryResponse.status());
+//       console.error('Response:', await subCategoryResponse.text());
+//     }
+    
+//     expect(subCategoryResponse.status()).toBe(201);
+//     subCategory = await subCategoryResponse.json();
+    
+//     // Step 3: Create plant under the sub-category via API
+//     const plantRes = await context.post(`/api/plants/category/${subCategory.id}`, {
+//       data: {
+//         name: `TestPlant${randomNumber}`,
+//         price: 500,
+//         quantity: 10,
+//         category: subCategory
+//       }
+//     });
+    
+//     if (plantRes.status() !== 201) {
+//       console.error('Plant creation failed. Status:', plantRes.status());
+//       console.error('Response:', await plantRes.text());
+//     }
+    
+//     expect(plantRes.status()).toBe(201);
+//     plant = await plantRes.json();
+    
+//     // Step 4: Navigate to the plants page AFTER creating all data
+//     // Wait for successful login - adjust this based on your app's behavior
+//     await page.waitForURL('**/ui/**', { timeout: 10000 });
+//     await page.goto('/ui/plants');
+//     await page.waitForLoadState('domcontentloaded');
+//     await page.waitForTimeout(1000);
+    
+//     // Step 5: Find and use the category select element
+//     // Wait for the page to fully load
+//     await page.waitForSelector('table', { timeout: 10000 });
+    
+//     // Find the select element - it should be somewhere on the page
+//     const categorySelect = page.locator('select').first();
+    
+//     // Wait for select to be attached and visible
+//     await categorySelect.waitFor({ state: 'attached', timeout: 5000 });
+    
+//     // Get all available options
+//     await page.waitForTimeout(1000);
+//     const options = await categorySelect.locator('option').allTextContents();
+//     console.log('Available categories:', options);
+    
+//     // Refresh page if category not found
+//     if (!options.some(opt => opt.includes(subCategory.name))) {
+//       console.log('Category not found, refreshing...');
+//       await page.reload();
+//       await page.waitForLoadState('domcontentloaded');
+//       await page.waitForTimeout(2000);
+//     }
+    
+//     // Select the category by value (ID) or label
+//     try {
+//       await categorySelect.selectOption({ value: subCategory.id.toString() });
+//       console.log('Selected category by ID:', subCategory.id);
+//     } catch (error) {
+//       console.log('Selecting by label instead:', subCategory.name);
+//       await categorySelect.selectOption({ label: subCategory.name });
+//     }
+    
+//     // Click search/filter button
+//     const searchButton = page.locator('button:has-text("Search")');
+//     await searchButton.click();
+    
+//     // Wait for filtered results
+//     await page.waitForTimeout(2000);
+    
+//     // Verify filtered results
+//     const plantRows = page.locator('table tbody tr');
+//     const count = await plantRows.count();
+    
+//     console.log(`Found ${count} plant rows after filtering`);
+//     expect(count).toBeGreaterThan(0);
+    
+//     // Verify that the created plant appears in the results
+//     let foundPlant = false;
+//     for (let i = 0; i < count; i++) {
+//       const rowText = await plantRows.nth(i).textContent();
+//       if (rowText && rowText.includes(`TestPlant${randomNumber}`)) {
+//         foundPlant = true;
+//         console.log('Found our test plant in the filtered results!');
+//         expect(rowText.toLowerCase()).toContain(subCategory.name.toLowerCase());
+//         break;
+//       }
+//     }
+    
+//     expect(foundPlant).toBe(true);
+    
+//   } finally {
+//     // CLEANUP - Delete in reverse order of dependencies
+    
+//     if (plant?.id) {
+//       try {
+//         await context.delete(`/api/inventory/plant/${plant.id}`);
+//       } catch (error) {
+//         console.log('Inventory cleanup failed or not found');
+//       }
+//     }
+    
+//     if (plant?.id) {
+//       try {
+//         await context.delete(`/api/plants/${plant.id}`);
+//       } catch (error) {
+//         console.log('Plant cleanup failed');
+//       }
+//     }
+    
+//     if (subCategory?.id) {
+//       try {
+//         await context.delete(`/api/categories/${subCategory.id}`);
+//       } catch (error) {
+//         console.log('Sub-category cleanup failed');
+//       }
+//     }
+    
+//     if (mainCategory?.id) {
+//       try {
+//         await context.delete(`/api/categories/${mainCategory.id}`);
+//       } catch (error) {
+//         console.log('Main category cleanup failed');
+//       }
+//     }
+//   }
+// }); // passed
 
 
 

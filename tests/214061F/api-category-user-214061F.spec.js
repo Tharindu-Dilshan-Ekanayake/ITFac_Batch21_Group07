@@ -52,7 +52,7 @@ test("API_USER-17: Update category unauthorized", async () => {
     data: updatePayload,
   });
 
-  // ✅ Expected: 403 Forbidden
+  // Expected: 403 Forbidden
   expect(updateRes.status(), await updateRes.text()).toBe(403);
 
   const body = await updateRes.json();
@@ -83,7 +83,7 @@ test("API_USER-18: Delete category unauthorized", async () => {
 
   const deleteRes = await userContext.delete(`/api/categories/${categoryId}`);
 
-  // ✅ Expected: 403 Forbidden
+  // Expected: 403 Forbidden
   expect(deleteRes.status(), await deleteRes.text()).toBe(403);
 
   const body = await deleteRes.json();
@@ -120,7 +120,7 @@ test("API_USER-19: Create category without token", async () => {
     data: payload,
   });
 
-  // ✅ Expected: 401 Unauthorized
+  // Expected: 401 Unauthorized
   expect(res.status(), await res.text()).toBe(401);
 
   const body = await res.json();
@@ -159,7 +159,7 @@ test("API_USER-20: Update category without token", async () => {
     data: updatePayload,
   });
 
-  // ✅ Expected: 401 Unauthorized
+  // Expected: 401 Unauthorized
   expect(res.status(), await res.text()).toBe(401);
 
   const body = await res.json();
