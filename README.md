@@ -17,5 +17,9 @@ To open the report, use the following command:
 
     npx allure open ./allure-report
 
+To run all the tests, use the following command:
+
+    node run-tests.js
+
 Happy Testing!!
 
