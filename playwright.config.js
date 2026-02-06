@@ -3,10 +3,12 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
-  reporter: "html",
+  reporter: [["html"], ["allure-playwright", { outputFolder: "allure-report" }]],
   use: {
     baseURL: process.env.BASE_URL,
     browserName: "chromium",
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
     trace: "on-first-retry",
     headless: false,
   },
