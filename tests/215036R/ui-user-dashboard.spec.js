@@ -80,7 +80,7 @@ test("Navigation via Manage Categories button", async ({ page, baseURL }) => {
 test("Navigation via Manage Plants button", async ({ page, baseURL }) => {
   await page.goto(`${baseURL}/ui/dashboard`);
 
-  // Locator for the manage categories button
+  // Locator for the manage plant button
   const managePlants = page.locator('a:has-text("Manage Plants")');
   await managePlants.click();
 
@@ -95,7 +95,7 @@ test("Navigation via Manage Plants button", async ({ page, baseURL }) => {
 test("Navigation via View Sales button", async ({ page, baseURL }) => {
   await page.goto(`${baseURL}/ui/dashboard`);
 
-  // Locator for the manage categories button
+  // Locator for the manage sales button
   const viewSales = page.locator('a:has-text("View Sales")');
   await viewSales.click();
 
@@ -138,7 +138,7 @@ test("Verify plants sidebar navigation and highlights active tab", async ({ page
   // Re-locate AFTER page loads
   const activePlantsTab = page.locator('a[href="/ui/plants"]');
 
-  // Verify categories tab is active
+  // Verify plant tab is active
   await expect(activePlantsTab).toHaveClass(/active/);
 
 });
@@ -156,7 +156,7 @@ test("Verify sales sidebar navigation and highlights active tab", async ({ page,
   // Re-locate AFTER page loads
   const activeSalesTab = page.locator('a[href="/ui/sales"]');
 
-  // Verify categories tab is active
+  // Verify sales tab is active
   await expect(activeSalesTab).toHaveClass(/active/);
 
 });
