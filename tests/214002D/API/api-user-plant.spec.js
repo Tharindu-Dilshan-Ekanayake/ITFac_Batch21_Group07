@@ -5,6 +5,7 @@ import { check_PlantID } from "../data/plant.data";
 
 let TestCategoryId;
 let TestPlantId;
+let categoryID_1;
 
 test("Create category on Admin side ", async ({}) => {
   const context = await getAdminApiContext();
@@ -23,9 +24,9 @@ test("Create category on Admin side ", async ({}) => {
   });
   const createData = await createResponse1.json();
   expect(createResponse1.status()).toBe(201);
-  // console.log(createData);
 
   const firstCategoryId = createData.id;
+  categoryID_1 = createData.id;
 
   //  second category
   const createPayload2 = {
@@ -38,7 +39,6 @@ test("Create category on Admin side ", async ({}) => {
   });
   const createData2 = await createResponse2.json();
   expect(createResponse2.status()).toBe(201);
-  // console.log(createData2);
   TestCategoryId = createData2.id;
 });
 
@@ -103,6 +103,13 @@ test("Plant Get by Category ID", async ({ baseURL }) => {
   );
 
   expect(response.status()).toBe(200);
+  const data = await response.json();
+  expect(Array.isArray(data)).toBe(true);
+  expect(data.length).toBeGreaterThan(0);
+
+  const plant = data.find((p) => p.id === TestPlantId);
+  expect(plant).toBeDefined();
+  expect(plant).toHaveProperty("name", "Test Admin Plant");
 });
 
 test("Check plant exists by Invalid Plant ID", async ({ baseURL }) => {
@@ -137,4 +144,28 @@ test("Check to User can Delete existing plant", async ({ baseURL }) => {
   const plantID = TestPlantId;
   const response = await context.delete(`${baseURL}/api/plants/${plantID}`);
   expect(response.status()).toBe(403);
+});
+
+test.afterAll("Delete category Created for Plant", async ({ baseURL }) => {
+  const context = await getAdminApiContext();
+
+  // First delete plant
+  const PlantID = TestPlantId;
+  const response = await context.delete(`${baseURL}/api/plants/${PlantID}`);
+  expect(response.status()).toBe(204);
+
+  // Then delete category
+
+  //  First category delete
+  const categoryID = TestCategoryId;
+  const response1 = await context.delete(
+    `${baseURL}/api/categories/${categoryID}`,
+  );
+  expect(response1.status()).toBe(204);
+
+  //  Second category delete
+  const response2 = await context.delete(
+    `${baseURL}/api/categories/${categoryID_1}`,
+  );
+  expect(response2.status()).toBe(204);
 });
