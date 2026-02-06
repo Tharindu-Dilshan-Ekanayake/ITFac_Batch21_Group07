@@ -183,22 +183,29 @@ test("Sort categories by ID", async ({ page, baseURL }) => {
 
   const idHeader = page.locator('th a:has-text("ID")');
 
-  // Click once → ASC
+  // ASC
   await idHeader.click();
-  // Targets the first <td> in every row
-  const columnValues = await page.locator('table td:nth-child(1)').allInnerTexts();
-  const sortedAsc = [...columnValues].sort((a, b) => Number(a) - Number(b));
+  const ascValues = (await page
+    .locator('table td:nth-child(1)')
+    .allInnerTexts())
+    .map(Number);
 
-  expect(columnValues).toEqual(sortedAsc);
+  const ascSorted = [...ascValues].sort((a, b) => a - b);
+  expect(ascValues).toEqual(ascSorted);
   await expectArrow(idHeader, "down");
 
-  // Click again → DESC
+  // DESC
   await idHeader.click();
-  const descValues = await page.locator('table td:nth-child(1)').allInnerTexts();
-  const sortedDesc = [...sortedAsc].reverse();
-  expect(descValues).toEqual(sortedDesc);
+  const descValues = (await page
+    .locator('table td:nth-child(1)')
+    .allInnerTexts())
+    .map(Number);
+
+  const descSorted = [...descValues].sort((a, b) => b - a);
+  expect(descValues).toEqual(descSorted);
   await expectArrow(idHeader, "up");
 });
+
 
 // helper function to detect arrow 
 async function expectArrow(headerLocator, direction) {
