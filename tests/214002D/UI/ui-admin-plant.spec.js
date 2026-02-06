@@ -38,6 +38,8 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
   };
 
   let categoryId;
+  let TestCategoryId_1;
+  let TestCategoryId_2;
 
   const fieldError = (page, selector) =>
     page.locator(`${selector} + div, ${selector} ~ div`);
@@ -92,6 +94,9 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
 
     console.log("First Category ID:", firstCategoryId);
     console.log("Second Category ID:", secondCategoryId);
+
+    TestCategoryId_1 = firstCategoryId;
+    TestCategoryId_2 = secondCategoryId;
 
     categoryId = secondCategoryId;
 
@@ -262,6 +267,18 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     const lowBadge = stockCell.locator("span.badge.bg-danger");
     await expect(lowBadge).toBeVisible();
     await expect(lowBadge).toHaveText("Low");
+
+    //  Delete the created plant to clean up
+    const rowDelete = page.locator("tr", { hasText: plantNameLow });
+    await expect(rowDelete).toBeVisible({ timeout: 5000 });
+    page.once("dialog", async (dialog) => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toContain("Delete this plant?");
+      await dialog.accept();
+    });
+
+    await rowDelete.locator('button[title="Delete"]').click();
+    await expect(page.locator("tr", { hasText: plantNameLow })).toHaveCount(0);
   });
 
   test("UI_ADMIN_Plant-11: Cancel button on Add Plant", async ({
@@ -323,6 +340,20 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     const stockCell = updatedRow.locator("td").nth(3);
 
     await expect(stockCell).toContainText("8");
+
+    //  Delete the updated plant to clean up
+    const rowDelete = page.locator("tr", { hasText: updatePlantName });
+    await expect(rowDelete).toBeVisible({ timeout: 5000 });
+    page.once("dialog", async (dialog) => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toContain("Delete this plant?");
+      await dialog.accept();
+    });
+
+    await rowDelete.locator('button[title="Delete"]').click();
+    await expect(page.locator("tr", { hasText: updatePlantName })).toHaveCount(
+      0,
+    );
   });
 
   test("UI_ADMIN_Plant-13: Create plant then delete it", async ({
@@ -365,5 +396,51 @@ test.describe.serial("UI_ADMIN_Plant — Admin Plant Module", () => {
     await expect(alert.locator("span")).toHaveText(
       "Plant deleted successfully",
     );
+  });
+
+  test("Category Cleanup: Delete categories created for plant tests", async ({
+    page,
+    baseURL,
+  }) => {
+    await page.goto(`${baseURL}/ui/categories`);
+
+    const rows = page.locator("tbody tr");
+
+    const firstID = TestCategoryId_1;
+    const secondID = TestCategoryId_2;
+
+    const firstRow = rows.filter({ hasText: firstID });
+    const secondRow = rows.filter({ hasText: secondID });
+
+    // ✅ CORRECT LOCATOR (button, not <a>)
+    const firstDeleteBtn = firstRow.locator('button[title="Delete"]');
+    const secondDeleteBtn = secondRow.locator('button[title="Delete"]');
+
+    await expect(firstDeleteBtn).toBeVisible();
+    await expect(secondDeleteBtn).toBeVisible();
+
+    // ----- Delete SECOND category -----
+    page.once("dialog", async (dialog) => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toContain("Delete this category?");
+      await dialog.accept();
+    });
+
+    await secondDeleteBtn.click();
+    await page.waitForLoadState("networkidle");
+
+    // ----- Delete FIRST category -----
+    page.once("dialog", async (dialog) => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toContain("Delete this category?");
+      await dialog.accept();
+    });
+
+    await firstDeleteBtn.click();
+    await page.waitForLoadState("networkidle"); // better than timeout
+
+    // ----- Verify both are deleted -----
+    await expect(rows.filter({ hasText: secondID })).toHaveCount(0);
+    await expect(rows.filter({ hasText: firstID })).toHaveCount(0);
   });
 });
