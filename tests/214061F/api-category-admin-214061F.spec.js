@@ -31,7 +31,9 @@ test("API_ADMIN-11: Create main category (no parent)", async () => {
 });
 
 //test 12
+
 test("API_ADMIN-12: Create parent then sub-category using parent object", async () => {
+
   const context = await getAdminApiContext();
   const rnd = Math.floor(Math.random() * 1000); // keep names within length limits
 
