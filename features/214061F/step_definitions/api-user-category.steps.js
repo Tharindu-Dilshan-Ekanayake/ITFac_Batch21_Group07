@@ -136,15 +136,18 @@ When("I try to delete that category via API", async function () {
 
 // ---------- THEN ----------
 
-Then("the API response status should be {int}", async function (statusCode) {
+Then(
+  "the API response status should be {int} 214061F_UserApi",
+  async function (statusCode) {
   expect(
     this.apiResponse.status(),
     await this.apiResponse.text()
   ).toBe(statusCode);
-});
+  },
+);
 
 Then(
-  "the API response body should have status {int} and an error message",
+  "the API response body should have status {int} and an error message 214061F_UserApi",
   async function (statusCode) {
     expect(this.apiResponseBody).toHaveProperty("status", statusCode);
     expect(this.apiResponseBody).toHaveProperty("error");
