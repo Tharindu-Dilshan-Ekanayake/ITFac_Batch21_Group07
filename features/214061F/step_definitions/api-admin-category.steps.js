@@ -1,7 +1,31 @@
 import { When, Then } from "@cucumber/cucumber";
+import { expect, request } from "@playwright/test";
 import "dotenv/config";
-import { expect } from "@playwright/test";
-import { getAdminApiContext } from "../../../utils/api-admin.js";
+
+const BASE_URL = process.env.BASE_URL || "http://localhost:8080";
+
+// Fresh admin API context via login (independent of admin-token.json)
+async function getAdminApiContext() {
+	const loginContext = await request.newContext({ baseURL: BASE_URL });
+	const loginRes = await loginContext.post("/api/auth/login", {
+		data: {
+			username: process.env.ADMIN_USERNAME,
+			password: process.env.ADMIN_PASSWORD,
+		},
+	});
+
+	expect(loginRes.status(), await loginRes.text()).toBe(200);
+	const loginBody = await loginRes.json();
+	const token = loginBody.token;
+
+	return await request.newContext({
+		baseURL: BASE_URL,
+		extraHTTPHeaders: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+	});
+}
 
 // API_ADMIN-11: Create main category (no parent)
 When(
