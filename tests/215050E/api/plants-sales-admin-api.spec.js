@@ -1,4 +1,4 @@
-import{ test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { getAdminApiContext } from '../../../utils/api-admin.js';
 
 
@@ -47,40 +47,102 @@ test.describe('Admin Plants & Sales API', () => {
 
 
 
-  test('API_ADMIN-31 Sell plant and update stock', async () => {
+test('API_ADMIN-31 Sell plant and update stock', async () => {
   const context = await getAdminApiContext();
-
-  const createPlantPayload = {
-    id: 0,
-    name: `TestPlant-${Date.now()}`,
-    price: 500,
-    quantity: 10,
-    category: {
-      id: 3
+  const randomNumber = Math.floor(Math.random() * 100000);
+  
+  let mainCategory, subCategory, plant, sale;
+  
+  try {
+    // Step 1: Create MAIN category
+    const mainCategoryPayload = {
+      name: `Main${randomNumber}`,
+      subCategories: []
+    };
+    const mainCategoryResponse = await context.post("/api/categories", { 
+      data: mainCategoryPayload 
+    });
+    
+    if (mainCategoryResponse.status() !== 201) {
+      console.error('Main category creation failed. Status:', mainCategoryResponse.status());
+      console.error('Response:', await mainCategoryResponse.text());
     }
-  };
-
-  const createPlantRes = await context.post('/api/plants/category/3', {
-    data: createPlantPayload
-  });
-
-  // Debug helper (keep if needed)
-  if (createPlantRes.status() !== 201) {
-    console.log('Create plant error:', await createPlantRes.text());
+    
+    expect(mainCategoryResponse.status()).toBe(201);
+    mainCategory = await mainCategoryResponse.json();
+    
+    // Step 2: Create SUB-CATEGORY
+    const subCategoryPayload = {
+      name: `Sub${randomNumber}`,
+      parent: mainCategory,
+      subCategories: []
+    };
+    const subCategoryResponse = await context.post("/api/categories", { 
+      data: subCategoryPayload 
+    });
+    
+    if (subCategoryResponse.status() !== 201) {
+      console.error('Sub-category creation failed. Status:', subCategoryResponse.status());
+      console.error('Response:', await subCategoryResponse.text());
+    }
+    
+    expect(subCategoryResponse.status()).toBe(201);
+    subCategory = await subCategoryResponse.json();
+    
+    // Step 3: Create plant under the sub-category
+    const plantRes = await context.post(`/api/plants/category/${subCategory.id}`, {
+      data: {
+        name: `Test Plant ${Date.now()}`,
+        price: 500,
+        quantity: 10,
+        category: subCategory
+      }
+    });
+    
+    if (plantRes.status() !== 201) {
+      console.error('Plant creation failed. Status:', plantRes.status());
+      console.error('Response:', await plantRes.text());
+    }
+    
+    expect(plantRes.status()).toBe(201);
+    plant = await plantRes.json();
+    
+    // Step 4: Sell 1 unit
+    const sellResponse = await context.post(
+      `/api/sales/plant/${plant.id}?quantity=1`
+    );
+    expect(sellResponse.status()).toBe(201);
+    sale = await sellResponse.json();
+    
+  } finally {
+    // CLEANUP - Delete in reverse order of dependencies
+    
+    // 1. Delete sale first (if it was created)
+    if (sale?.id) {
+      await context.delete(`/api/sales/${sale.id}`);
+    }
+    
+    // 2. Delete inventory records associated with the plant
+    if (plant?.id) {
+      await context.delete(`/api/inventory/plant/${plant.id}`);
+    }
+    
+    // 3. Delete the plant
+    if (plant?.id) {
+      await context.delete(`/api/plants/${plant.id}`);
+    }
+    
+    // 4. Delete sub-category
+    if (subCategory?.id) {
+      await context.delete(`/api/categories/${subCategory.id}`);
+    }
+    
+    // 5. Delete main category
+    if (mainCategory?.id) {
+      await context.delete(`/api/categories/${mainCategory.id}`);
+    }
   }
-
-  expect(createPlantRes.status()).toBe(201);
-  const plant = await createPlantRes.json();
-  expect(plant).toHaveProperty('id');
-
-  // Sell 1 unit
-  const sellResponse = await context.post(
-    `/api/sales/plant/${plant.id}?quantity=1`
-  );
-
-  expect(sellResponse.status()).toBe(201);
-});      // passed
-
+});
 
   test('API_ADMIN-32 Prevent sale with invalid quantity', async () => {
     const context = await getAdminApiContext();
@@ -98,6 +160,71 @@ test.describe('Admin Plants & Sales API', () => {
 
   test('API_ADMIN-33 Get all sales', async () => {
     const context = await getAdminApiContext();
+    const randomNumber = Math.floor(Math.random() * 100000);
+  
+  let mainCategory, subCategory, plant, sale;
+  
+
+    // Step 1: Create MAIN category
+    const mainCategoryPayload = {
+      name: `Main${randomNumber}`,
+      subCategories: []
+    };
+    const mainCategoryResponse = await context.post("/api/categories", { 
+      data: mainCategoryPayload 
+    });
+    
+    if (mainCategoryResponse.status() !== 201) {
+      console.error('Main category creation failed. Status:', mainCategoryResponse.status());
+      console.error('Response:', await mainCategoryResponse.text());
+    }
+    
+    expect(mainCategoryResponse.status()).toBe(201);
+    mainCategory = await mainCategoryResponse.json();
+    
+    // Step 2: Create SUB-CATEGORY
+    const subCategoryPayload = {
+      name: `Sub${randomNumber}`,
+      parent: mainCategory,
+      subCategories: []
+    };
+    const subCategoryResponse = await context.post("/api/categories", { 
+      data: subCategoryPayload 
+    });
+    
+    if (subCategoryResponse.status() !== 201) {
+      console.error('Sub-category creation failed. Status:', subCategoryResponse.status());
+      console.error('Response:', await subCategoryResponse.text());
+    }
+    
+    expect(subCategoryResponse.status()).toBe(201);
+    subCategory = await subCategoryResponse.json();
+    
+    // Step 3: Create plant under the sub-category
+    const plantRes = await context.post(`/api/plants/category/${subCategory.id}`, {
+      data: {
+        name: `Test Plant ${Date.now()}`,
+        price: 500,
+        quantity: 10,
+        category: subCategory
+      }
+    });
+    
+    if (plantRes.status() !== 201) {
+      console.error('Plant creation failed. Status:', plantRes.status());
+      console.error('Response:', await plantRes.text());
+    }
+    
+    expect(plantRes.status()).toBe(201);
+    plant = await plantRes.json();
+    
+    // Step 4: Sell 1 unit
+    const sellResponse = await context.post(
+      `/api/sales/plant/${plant.id}?quantity=1`
+    );
+    expect(sellResponse.status()).toBe(201);
+    sale = await sellResponse.json();
+    
 
     const response = await context.get('/api/sales');
     expect(response.status()).toBe(200);
@@ -111,45 +238,83 @@ test.describe('Admin Plants & Sales API', () => {
   test('API_ADMIN-34 Get sale by sale ID', async () => {
   const context = await getAdminApiContext();
 
-  /* ---------------- Step 1: Create a plant ---------------- */
-  const plantRes = await context.post('/api/plants/category/3', {
-    data: {
-      name: `Test Plant ${Date.now()}`,
-      price: 500,
-      quantity: 20,
-      description: 'Plant created for sale test',
-      status: 'SELLABLE'
-    }
-  });
-
-  expect(plantRes.status()).toBe(201);
-  const plant = await plantRes.json();
-  const plantId = plant.id;
-
-  /* ---------------- Step 2: Create a sale ---------------- */
+  const randomNumber = Math.floor(Math.random() * 100000);
   
-  const saleRes = await context.post(`/api/sales/plant/${plant.id}?quantity=3`, {
-    data: {
-      plantId: plantId,
-      quantity: 3
+  let mainCategory, subCategory, plant, sale;
+  
+
+    // Step 1: Create MAIN category
+    const mainCategoryPayload = {
+      name: `Main${randomNumber}`,
+      subCategories: []
+    };
+    const mainCategoryResponse = await context.post("/api/categories", { 
+      data: mainCategoryPayload 
+    });
+    
+    if (mainCategoryResponse.status() !== 201) {
+      console.error('Main category creation failed. Status:', mainCategoryResponse.status());
+      console.error('Response:', await mainCategoryResponse.text());
     }
-  });
+    
+    expect(mainCategoryResponse.status()).toBe(201);
+    mainCategory = await mainCategoryResponse.json();
+    
+    // Step 2: Create SUB-CATEGORY
+    const subCategoryPayload = {
+      name: `Sub${randomNumber}`,
+      parent: mainCategory,
+      subCategories: []
+    };
+    const subCategoryResponse = await context.post("/api/categories", { 
+      data: subCategoryPayload 
+    });
+    
+    if (subCategoryResponse.status() !== 201) {
+      console.error('Sub-category creation failed. Status:', subCategoryResponse.status());
+      console.error('Response:', await subCategoryResponse.text());
+    }
+    
+    expect(subCategoryResponse.status()).toBe(201);
+    subCategory = await subCategoryResponse.json();
+    
+    // Step 3: Create plant under the sub-category
+    const plantRes = await context.post(`/api/plants/category/${subCategory.id}`, {
+      data: {
+        name: `Test Plant ${Date.now()}`,
+        price: 500,
+        quantity: 10,
+        category: subCategory
+      }
+    });
+    
+    if (plantRes.status() !== 201) {
+      console.error('Plant creation failed. Status:', plantRes.status());
+      console.error('Response:', await plantRes.text());
+    }
+    
+    expect(plantRes.status()).toBe(201);
+    plant = await plantRes.json();
+    
+    // Step 4: Sell 1 unit
+    const sellResponse = await context.post(
+      `/api/sales/plant/${plant.id}?quantity=1`
+    );
+    expect(sellResponse.status()).toBe(201);
+    sale = await sellResponse.json();
+     const saleId = sale.id;
 
-  expect(saleRes.status()).toBe(201);
-  const sale = await saleRes.json();
-  const saleId = sale.id;
-
-  /* ---------------- Step 3: Get sale by ID ---------------- */
+  /* Step 3: Get sale by ID */
   const response = await context.get(`/api/sales/${saleId}`);
   expect(response.status()).toBe(200);
 
   const body = await response.json();
 
-  /* ---------------- Step 4: Assertions ---------------- */
+  /*  Step 4: Assertions */
  
     expect(body).toHaveProperty('id', saleId);
-    expect(body.plant.id).toBe(plantId);
-    expect(body.quantity).toBe(3);
+    expect(body.plant.id).toBe(plant.id);
+    expect(body.quantity).toBe(1);
 
     });    // passed
 
@@ -170,31 +335,74 @@ test.describe('Admin Plants & Sales API', () => {
   test('API_ADMIN-36 Delete sale authorized', async () => {
   const context = await getAdminApiContext();
 
-  /* ---------------- Step 1: Create a plant ---------------- */
-  const plantRes = await context.post('/api/plants/category/3', {
-    data: {
-      name: `Test Plant ${Date.now()}`,
-      price: 500,
-      quantity: 10,
-      description: 'Plant for delete sale test',
-      status: 'SELLABLE'
+  const randomNumber = Math.floor(Math.random() * 100000);
+  
+  let mainCategory, subCategory, plant, sale;
+  
+
+    // Step 1: Create MAIN category
+    const mainCategoryPayload = {
+      name: `Main${randomNumber}`,
+      subCategories: []
+    };
+    const mainCategoryResponse = await context.post("/api/categories", { 
+      data: mainCategoryPayload 
+    });
+    
+    if (mainCategoryResponse.status() !== 201) {
+      console.error('Main category creation failed. Status:', mainCategoryResponse.status());
+      console.error('Response:', await mainCategoryResponse.text());
     }
-  });
-
-  expect(plantRes.status()).toBe(201);
-  const plant = await plantRes.json();
-  const plantId = plant.id;
-
-  /* ---------------- Step 2: Create a sale ---------------- */
-  const saleRes = await context.post(`/api/sales/plant/${plantId}?quantity=1`, {
-    data: { plantId, quantity: 1 }
-  });
-
-  expect(saleRes.status()).toBe(201);
-  const sale = await saleRes.json();
+    
+    expect(mainCategoryResponse.status()).toBe(201);
+    mainCategory = await mainCategoryResponse.json();
+    
+    // Step 2: Create SUB-CATEGORY
+    const subCategoryPayload = {
+      name: `Sub${randomNumber}`,
+      parent: mainCategory,
+      subCategories: []
+    };
+    const subCategoryResponse = await context.post("/api/categories", { 
+      data: subCategoryPayload 
+    });
+    
+    if (subCategoryResponse.status() !== 201) {
+      console.error('Sub-category creation failed. Status:', subCategoryResponse.status());
+      console.error('Response:', await subCategoryResponse.text());
+    }
+    
+    expect(subCategoryResponse.status()).toBe(201);
+    subCategory = await subCategoryResponse.json();
+    
+    // Step 3: Create plant under the sub-category
+    const plantRes = await context.post(`/api/plants/category/${subCategory.id}`, {
+      data: {
+        name: `Test Plant ${Date.now()}`,
+        price: 500,
+        quantity: 10,
+        category: subCategory
+      }
+    });
+    
+    if (plantRes.status() !== 201) {
+      console.error('Plant creation failed. Status:', plantRes.status());
+      console.error('Response:', await plantRes.text());
+    }
+    
+    expect(plantRes.status()).toBe(201);
+    plant = await plantRes.json();
+    
+    // Step 4: Sell 1 unit
+    const sellResponse = await context.post(
+      `/api/sales/plant/${plant.id}?quantity=1`
+    );
+    expect(sellResponse.status()).toBe(201);
+    sale = await sellResponse.json();
+    
   const saleId = sale.id;
 
-  /* ---------------- Step 3: Delete the sale ---------------- */
+  /*  Step 3: Delete the sale  */
   const deleteRes = await context.delete(`/api/sales/${saleId}`);
   expect(deleteRes.status()).toBe(204);
 });   // passed
