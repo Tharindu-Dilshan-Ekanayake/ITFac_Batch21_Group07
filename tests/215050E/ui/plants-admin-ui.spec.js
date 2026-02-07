@@ -247,7 +247,7 @@ test('UI_ADMIN_Plant-27 Verify reset button functionality', async ({ page }) => 
 });  //passed
 
 
- test.only('UI_ADMIN_Plant-28 Sort plants by Name', async ({ page }) => {
+ test('UI_ADMIN_Plant-28 Sort plants by Name', async ({ page }) => {
     const nameHeaderLink = page.locator('th:has-text("Name") a');
     
     // First click - Descending (Z to A) with ↓ arrow

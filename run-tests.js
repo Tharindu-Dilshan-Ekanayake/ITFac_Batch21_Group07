@@ -17,8 +17,8 @@ const testFiles = [
 
   'tests/214061F/ui-category-admin-214061F.spec.js',
   'tests/214061F/ui-category-user-214061F.spec.js',
-  'tests/214061F/api-admin-category-214061F.spec.js',
-  'tests/214061F/api-user-category-214061F.spec.js',
+  'tests/214061F/api-category-admin-214061F.spec.js',
+  'tests/214061F/api-category-user-214061F.spec.js',
 
   'tests/214002D/UI/ui-admin-plant.spec.js',
   'tests/214002D/UI/ui-user-plant.spec.js',
